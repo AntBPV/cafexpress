@@ -92,6 +92,8 @@ void main() {
       'usuario.existente',
     );
     await tester.enterText(find.byKey(const Key('login-password')), 'privada');
+    await tester.tap(find.byTooltip('Mostrar contraseña'));
+    await tester.pump();
     await openRegistration(tester);
     expect(find.text('Crea tu cuenta'), findsOneWidget);
     expect(find.byType(RegisterScreen), findsOneWidget);
@@ -115,6 +117,17 @@ void main() {
           .controller!
           .text,
       isEmpty,
+    );
+    expect(
+      tester
+          .widget<TextField>(
+            find.descendant(
+              of: find.byKey(const Key('login-password')),
+              matching: find.byType(TextField),
+            ),
+          )
+          .obscureText,
+      isTrue,
     );
     await openRegistration(tester);
     await tester.tap(find.byType(BackButton));

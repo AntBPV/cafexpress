@@ -69,6 +69,7 @@ class _LoginScreenState extends State<LoginScreen> {
     _password.clear();
     setState(() {
       _isOpeningRegister = true;
+      _obscurePassword = true;
       _errorMessage = null;
       _registrationMessage = null;
     });

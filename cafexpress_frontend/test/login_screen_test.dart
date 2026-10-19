@@ -12,11 +12,20 @@ import 'package:cafexpress_frontend/core/network/api_client.dart';
 import 'package:cafexpress_frontend/core/network/api_exception.dart';
 import 'package:cafexpress_frontend/features/auth/data/auth_repository.dart';
 import 'package:cafexpress_frontend/features/auth/domain/auth_session.dart';
+import 'package:cafexpress_frontend/features/auth/domain/registered_account.dart';
 
 class ControlledAuthRepository implements AuthRepository {
   ControlledAuthRepository(this.response);
   final Future<AuthSession> Function() response;
   int calls = 0;
+
+  @override
+  Future<RegisteredAccount> register({
+    required String name,
+    required String username,
+    required String email,
+    required String password,
+  }) async => throw UnimplementedError('Este doble solo prueba el login.');
 
   @override
   Future<AuthSession> signIn({

@@ -3,6 +3,7 @@ class ApiConfig {
   const ApiConfig({
     this.baseUrl = '',
     this.loginPath = '/api/auth/login',
+    this.registerPath = '/api/auth/register',
     this.timeout = const Duration(seconds: 15),
   });
 
@@ -12,10 +13,15 @@ class ApiConfig {
       'AUTH_LOGIN_PATH',
       defaultValue: '/api/auth/login',
     ),
+    registerPath: String.fromEnvironment(
+      'AUTH_REGISTER_PATH',
+      defaultValue: '/api/auth/register',
+    ),
   );
 
   final String baseUrl;
   final String loginPath;
+  final String registerPath;
   final Duration timeout;
 
   bool get isConfigured => baseUrl.trim().isNotEmpty;

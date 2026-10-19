@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
-import '../../../core/theme/app_theme.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_session.dart';
+import '../domain/registered_account.dart';
+import 'register_screen.dart';
+import 'widgets/auth_feedback.dart';
+import 'widgets/auth_scaffold.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.authRepository});
@@ -23,7 +26,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _obscurePassword = true;
   bool _isSubmitting = false;
   bool _hasSubmitted = false;
+  bool _isOpeningRegister = false;
   String? _errorMessage;
+  String? _registrationMessage;
   AuthSession? _session;
 
   @override
@@ -49,7 +54,40 @@ class _LoginScreenState extends State<LoginScreen> {
       value == null || value.isEmpty ? 'Escribe tu contraseña.' : null;
 
   void _clearError(String _) {
-    if (_errorMessage != null) setState(() => _errorMessage = null);
+    if (_errorMessage != null || _registrationMessage != null) {
+      setState(() {
+        _errorMessage = null;
+        _registrationMessage = null;
+      });
+    }
+  }
+
+  Future<void> _openRegistration() async {
+    if (_isSubmitting || _isOpeningRegister) return;
+    FocusManager.instance.primaryFocus?.unfocus();
+    TextInput.finishAutofillContext(shouldSave: false);
+    _password.clear();
+    setState(() {
+      _isOpeningRegister = true;
+      _errorMessage = null;
+      _registrationMessage = null;
+    });
+    final account = await Navigator.of(context).push<RegisteredAccount>(
+      MaterialPageRoute(
+        builder: (_) => RegisterScreen(authRepository: widget.authRepository),
+      ),
+    );
+    if (!mounted) return;
+    if (account != null) _formKey.currentState?.reset();
+    setState(() {
+      _isOpeningRegister = false;
+      if (account != null) {
+        _identifier.text = account.username;
+        _password.clear();
+        _hasSubmitted = false;
+        _registrationMessage = 'Cuenta creada. Inicia sesión para continuar.';
+      }
+    });
   }
 
   Future<void> _signIn() async {
@@ -70,6 +108,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isSubmitting = true;
       _errorMessage = null;
+      _registrationMessage = null;
     });
     try {
       final session = await widget.authRepository.signIn(
@@ -103,89 +142,55 @@ class _LoginScreenState extends State<LoginScreen> {
       _hasSubmitted = false;
       _obscurePassword = true;
       _errorMessage = null;
+      _registrationMessage = null;
     });
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-    body: SafeArea(
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          final expanded =
-              constraints.maxWidth >= 900 && constraints.maxHeight >= 500;
-          final content = _buildContent(context, expanded: expanded);
-          if (!expanded) return content;
-          return Row(
-            children: [
-              const Expanded(flex: 5, child: _BrandPanel()),
-              Expanded(flex: 6, child: content),
-            ],
-          );
-        },
-      ),
-    ),
-  );
-
-  Widget _buildContent(BuildContext context, {required bool expanded}) {
+  Widget build(BuildContext context) {
     final colors = Theme.of(context).colorScheme;
     final text = Theme.of(context).textTheme;
-    return LayoutBuilder(
-      builder: (context, constraints) => SingleChildScrollView(
-        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-        padding: EdgeInsets.symmetric(
-          horizontal: expanded ? 48 : 24,
-          vertical: expanded ? 48 : 32,
-        ),
-        child: ConstrainedBox(
-          constraints: BoxConstraints(
-            minHeight: (constraints.maxHeight - (expanded ? 96 : 64)).clamp(
-              0,
-              double.infinity,
+    return AuthScaffold(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          if (_session case final session?)
+            _buildSuccess(context, session)
+          else ...[
+            Semantics(
+              header: true,
+              child: Text('Inicia sesión', style: text.headlineLarge),
             ),
-          ),
-          child: Center(
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  if (!expanded) ...[
-                    const _Wordmark(),
-                    const SizedBox(height: 56),
-                  ],
-                  if (_session case final session?)
-                    _buildSuccess(context, session)
-                  else ...[
-                    Semantics(
-                      header: true,
-                      child: Text('Inicia sesión', style: text.headlineLarge),
-                    ),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Accede a tu cuenta y continúa con tus compras y ventas.',
-                      style: text.bodyLarge?.copyWith(
-                        color: colors.onSurfaceVariant,
-                      ),
-                    ),
-                    const SizedBox(height: 40),
-                    _buildForm(context),
-                  ],
-                  const SizedBox(height: 48),
-                  Divider(color: colors.outlineVariant),
-                  const SizedBox(height: 16),
-                  Text(
-                    'De la preparación al destino, todo bajo control.',
-                    textAlign: TextAlign.center,
-                    style: text.bodySmall?.copyWith(
-                      color: colors.onSurfaceVariant,
-                    ),
-                  ),
-                ],
+            const SizedBox(height: 16),
+            Text(
+              'Accede a tu cuenta y continúa con tus compras y ventas.',
+              style: text.bodyLarge?.copyWith(color: colors.onSurfaceVariant),
+            ),
+            const SizedBox(height: 40),
+            if (_registrationMessage case final message?) ...[
+              AuthFeedback(
+                key: const Key('login-registration-success'),
+                message: message,
+                isError: false,
+              ),
+              const SizedBox(height: 24),
+            ],
+            _buildForm(context),
+            const SizedBox(height: 16),
+            TextButton(
+              key: const Key('login-register'),
+              style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: _isSubmitting || _isOpeningRegister
+                  ? null
+                  : _openRegistration,
+              child: const Text(
+                '¿No tienes cuenta? Regístrate',
+                textAlign: TextAlign.center,
               ),
             ),
-          ),
-        ),
+          ],
+        ],
       ),
     );
   }
@@ -259,24 +264,7 @@ class _LoginScreenState extends State<LoginScreen> {
             ),
             if (_errorMessage case final message?) ...[
               const SizedBox(height: 24),
-              Semantics(
-                liveRegion: true,
-                child: Container(
-                  key: const Key('login-error'),
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: colors.errorContainer,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    message,
-                    style: TextStyle(
-                      color: colors.onErrorContainer,
-                      height: 1.5,
-                    ),
-                  ),
-                ),
-              ),
+              AuthFeedback(key: const Key('login-error'), message: message),
             ],
             const SizedBox(height: 32),
             FilledButton(
@@ -344,83 +332,4 @@ class _LoginScreenState extends State<LoginScreen> {
       ),
     );
   }
-}
-
-class _Wordmark extends StatelessWidget {
-  const _Wordmark({this.onDark = false});
-  final bool onDark;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Row(
-      children: [
-        ExcludeSemantics(
-          child: Icon(
-            Icons.eco_outlined,
-            size: 36,
-            color: onDark ? AppColors.gold : theme.colorScheme.primary,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Flexible(
-          child: Text(
-            'Caféxpress',
-            style: theme.textTheme.headlineSmall?.copyWith(
-              fontWeight: FontWeight.w800,
-              letterSpacing: -0.6,
-              color: onDark ? AppColors.cream : theme.colorScheme.onSurface,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
-}
-
-class _BrandPanel extends StatelessWidget {
-  const _BrandPanel();
-
-  @override
-  Widget build(BuildContext context) => ColoredBox(
-    color: AppColors.coffee,
-    child: Padding(
-      padding: const EdgeInsets.all(48),
-      child: LayoutBuilder(
-        builder: (context, constraints) => SingleChildScrollView(
-          child: ConstrainedBox(
-            constraints: BoxConstraints(minHeight: constraints.maxHeight),
-            child: IntrinsicHeight(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const _Wordmark(onDark: true),
-                  const SizedBox(height: 64),
-                  const Spacer(),
-                  Text(
-                    'Café y cacao,',
-                    style: Theme.of(context).textTheme.headlineLarge
-                        ?.copyWith(color: AppColors.gold),
-                  ),
-                  const SizedBox(height: 16),
-                  Text(
-                    'conectados con nuevos mercados.',
-                    style: Theme.of(context).textTheme.headlineLarge
-                        ?.copyWith(color: AppColors.cream),
-                  ),
-                  const SizedBox(height: 32),
-                  Text(
-                    'Compra y vende tu producto desde un solo lugar.',
-                    style: Theme.of(context).textTheme.bodyLarge
-                        ?.copyWith(color: AppColors.cream),
-                  ),
-                  const SizedBox(height: 32),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    ),
-  );
 }

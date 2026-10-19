@@ -90,55 +90,72 @@ void main() {
     ),
   ];
 
-  for (final scenario in cases) {
-    testWidgets('sin desbordamientos: ${scenario.name}', (tester) async {
-      tester.view.devicePixelRatio = 1;
-      tester.view.physicalSize = scenario.size;
-      tester.platformDispatcher.textScaleFactorTestValue = scenario.scale;
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          const FakeAccessibilityFeatures(disableAnimations: true);
-      if (scenario.keyboard) {
-        tester.view.viewInsets = const FakeViewPadding(bottom: 300);
-      }
-      addTearDown(tester.view.reset);
-      addTearDown(tester.platformDispatcher.clearAllTestValues);
+  for (final registration in [false, true]) {
+    for (final scenario in cases) {
+      final prefix = registration ? 'registro-' : '';
+      testWidgets('sin desbordamientos: $prefix${scenario.name}', (
+        tester,
+      ) async {
+        tester.view.devicePixelRatio = 1;
+        tester.view.physicalSize = scenario.size;
+        tester.platformDispatcher.textScaleFactorTestValue = scenario.scale;
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            const FakeAccessibilityFeatures(disableAnimations: true);
+        if (scenario.keyboard) {
+          tester.view.viewInsets = const FakeViewPadding(bottom: 300);
+        }
+        addTearDown(tester.view.reset);
+        addTearDown(tester.platformDispatcher.clearAllTestValues);
 
-      final boundaryKey = GlobalKey();
-      await tester.pumpWidget(
-        RepaintBoundary(
-          key: boundaryKey,
-          child: CafeExpressApp(
-            themeMode: scenario.dark ? ThemeMode.dark : ThemeMode.light,
+        final boundaryKey = GlobalKey();
+        await tester.pumpWidget(
+          RepaintBoundary(
+            key: boundaryKey,
+            child: CafeExpressApp(
+              themeMode: scenario.dark ? ThemeMode.dark : ThemeMode.light,
+            ),
           ),
-        ),
-      );
-      await tester.pumpAndSettle();
-      expect(tester.takeException(), isNull);
+        );
+        await tester.pumpAndSettle();
+        if (registration) {
+          final link = find.byKey(const Key('login-register'));
+          await tester.ensureVisible(link);
+          await tester.tap(link);
+          await tester.pumpAndSettle();
+        }
+        expect(tester.takeException(), isNull);
 
-      if (reviewDir.isNotEmpty) {
-        await tester.runAsync(() async {
-          final boundary =
-              boundaryKey.currentContext!.findRenderObject()!
-                  as RenderRepaintBoundary;
-          final image = await boundary.toImage(pixelRatio: 2);
-          final data = await image.toByteData(format: ui.ImageByteFormat.png);
-          await Directory(reviewDir).create(recursive: true);
-          await File('$reviewDir/${scenario.name}.png')
-              .writeAsBytes(data!.buffer.asUint8List());
-          image.dispose();
-        });
-      }
+        if (reviewDir.isNotEmpty) {
+          await tester.runAsync(() async {
+            final boundary =
+                boundaryKey.currentContext!.findRenderObject()!
+                    as RenderRepaintBoundary;
+            final image = await boundary.toImage(pixelRatio: 2);
+            final data = await image.toByteData(format: ui.ImageByteFormat.png);
+            await Directory(reviewDir).create(recursive: true);
+            await File('$reviewDir/$prefix${scenario.name}.png')
+                .writeAsBytes(data!.buffer.asUint8List());
+            image.dispose();
+          });
+        }
 
-      final submit = find.byKey(const Key('login-submit'));
-      await tester.ensureVisible(submit);
-      await tester.pumpAndSettle();
-      await tester.tap(submit);
-      await tester.pumpAndSettle();
-      expect(
-        find.text('Escribe tu usuario o correo electrónico.'),
-        findsOneWidget,
-      );
-      expect(tester.takeException(), isNull);
-    });
+        final submit = find.byKey(
+          Key(registration ? 'register-submit' : 'login-submit'),
+        );
+        await tester.ensureVisible(submit);
+        await tester.pumpAndSettle();
+        await tester.tap(submit);
+        await tester.pumpAndSettle();
+        expect(
+          find.text(
+            registration
+                ? 'Escribe tu nombre.'
+                : 'Escribe tu usuario o correo electrónico.',
+          ),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
   }
 }

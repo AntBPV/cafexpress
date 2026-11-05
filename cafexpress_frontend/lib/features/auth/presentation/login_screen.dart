@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../navigation/domain/user_role.dart';
+import '../../navigation/presentation/main_navigation_shell.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_session.dart';
 import '../domain/registered_account.dart';
@@ -89,6 +91,25 @@ class _LoginScreenState extends State<LoginScreen> {
         _registrationMessage = 'Cuenta creada. Inicia sesión para continuar.';
       }
     });
+  }
+
+  Future<void> _openNavigationShell({AuthSession? session}) async {
+    FocusManager.instance.primaryFocus?.unfocus();
+    final role = UserRole.tryParse(session?.role) ?? UserRole.comprador;
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute(
+        builder: (routeContext) => MainNavigationShell(
+          userName: session?.name,
+          initialRole: role,
+          onSignOut: () {
+            Navigator.of(routeContext).pop();
+            if (mounted && _session != null) {
+              _signOut();
+            }
+          },
+        ),
+      ),
+    );
   }
 
   Future<void> _signIn() async {
@@ -187,6 +208,18 @@ class _LoginScreenState extends State<LoginScreen> {
                   : _openRegistration,
               child: const Text(
                 '¿No tienes cuenta? Regístrate',
+                textAlign: TextAlign.center,
+              ),
+            ),
+            const SizedBox(height: 8),
+            TextButton(
+              key: const Key('login-preview-navigation'),
+              style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+              onPressed: _isSubmitting || _isOpeningRegister
+                  ? null
+                  : () => _openNavigationShell(),
+              child: const Text(
+                'Explorar interfaz de navegación',
                 textAlign: TextAlign.center,
               ),
             ),
@@ -328,7 +361,23 @@ class _LoginScreenState extends State<LoginScreen> {
             style: theme.textTheme.bodyLarge,
           ),
           const SizedBox(height: 32),
-          FilledButton(onPressed: _signOut, child: const Text('Cerrar sesión')),
+          FilledButton.icon(
+            key: const Key('login-open-navigation'),
+            onPressed: () => _openNavigationShell(session: session),
+            icon: const Icon(Icons.dashboard_outlined),
+            label: const Text('Ir al panel principal'),
+          ),
+          const SizedBox(height: 12),
+          OutlinedButton(
+            style: OutlinedButton.styleFrom(
+              minimumSize: const Size(0, 56),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: _signOut,
+            child: const Text('Cerrar sesión'),
+          ),
         ],
       ),
     );

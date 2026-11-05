@@ -1,6 +1,7 @@
 package com.cafexpress.backend.producto.service;
 
 import com.cafexpress.backend.producto.dto.ProductoRequest;
+import com.cafexpress.backend.producto.dto.PaginaResponse;
 import com.cafexpress.backend.producto.dto.ProductoResponse;
 import com.cafexpress.backend.producto.dto.ProductoUpdateRequest;
 import com.cafexpress.backend.producto.entity.Producto;
@@ -9,11 +10,12 @@ import com.cafexpress.backend.usuario.entity.Usuario;
 import com.cafexpress.backend.usuario.enums.Rol;
 import com.cafexpress.backend.usuario.repository.UsuarioRepository;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.List;
 import java.util.UUID;
 
 @Service
@@ -49,21 +51,26 @@ public class ProductoService {
     }
 
     @Transactional(readOnly = true)
-    public List<ProductoResponse> listarDisponibles() {
-        return productos.findAllByDisponibleTrueOrderByCreadoEnDesc()
-                .stream()
-                .map(ProductoResponse::desde)
-                .toList();
+    public PaginaResponse<ProductoResponse> listarDisponibles(Pageable pageable) {
+        Page<ProductoResponse> pagina = productos
+                .findAllByDisponibleTrue(pageable)
+                .map(ProductoResponse::desde);
+
+        return PaginaResponse.desde(pagina);
     }
 
     @Transactional(readOnly = true)
-    public List<ProductoResponse> listarDelVendedor(UUID vendedorId) {
+    public PaginaResponse<ProductoResponse> listarDelVendedor(
+            UUID vendedorId,
+            Pageable pageable
+    ) {
         obtenerVendedor(vendedorId);
 
-        return productos.findAllByVendedorIdOrderByCreadoEnDesc(vendedorId)
-                .stream()
-                .map(ProductoResponse::desde)
-                .toList();
+        Page<ProductoResponse> pagina = productos
+                .findAllByVendedorId(vendedorId, pageable)
+                .map(ProductoResponse::desde);
+
+        return PaginaResponse.desde(pagina);
     }
 
     @Transactional

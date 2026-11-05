@@ -118,6 +118,13 @@ public class Producto {
         }
     }
 
+    public void descontarCantidad(BigDecimal cantidad) {
+        cantidadDisponible = cantidadDisponible.subtract(cantidad);
+        if (cantidadDisponible.signum() == 0) {
+            disponible = false;
+        }
+    }
+
     @PrePersist
     void antesDeGuardar() {
         creadoEn = Instant.now();

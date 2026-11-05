@@ -75,6 +75,15 @@ publicar y administrar sus productos mediante:
 | DELETE | `/api/v1/vendedor/productos/{id}` | VENDEDOR |
 | GET | `/api/v1/productos` | VENDEDOR o COMPRADOR |
 
+Los endpoints GET de productos tienen paginación backend. Usan páginas
+base cero y aceptan `page`, `size` y `sort`. El tamaño predeterminado es 20
+y el máximo es 100. Por ejemplo:
+
+`GET /api/v1/productos?page=0&size=20&sort=creadoEn,desc`
+
+La respuesta contiene los productos en `content` y los metadatos
+`page`, `size`, `totalElements`, `totalPages`, `first` y `last`.
+
 El cuerpo de creación y actualización contiene `nombre`,
 `cantidadUnitaria`, `unidadCantidad` (`GRAMOS` o `KILOGRAMOS`),
 `cantidadDisponible`, `lugarOrigen`, `precioUnitario` y `disponible`.
@@ -82,6 +91,24 @@ Cada producto queda vinculado al vendedor autenticado. La implementación
 solo administra el catálogo; no realiza pagos ni transacciones reales.
 La actualización permite enviar únicamente los campos que se desean
 modificar. La eliminación devuelve un mensaje de confirmación.
+
+## Ordenes
+
+Los compradores pueden solicitar productos disponibles y los vendedores
+pueden consultar y resolver las solicitudes de sus propios productos:
+
+| Método | Ruta | Rol |
+|---|---|---|
+| POST | `/api/v1/comprador/ordenes` | COMPRADOR |
+| GET | `/api/v1/comprador/ordenes` | COMPRADOR |
+| GET | `/api/v1/vendedor/ordenes` | VENDEDOR |
+| PATCH | `/api/v1/vendedor/ordenes/{id}/aceptar` | VENDEDOR |
+| PATCH | `/api/v1/vendedor/ordenes/{id}/rechazar` | VENDEDOR |
+
+Para solicitar una orden se envían `productoId` y `cantidad`. La orden se
+crea con estado `SOLICITADA`. Al aceptarla, el backend bloquea el producto,
+comprueba nuevamente la disponibilidad y descuenta la cantidad solicitada.
+Los estados posibles son `SOLICITADA`, `ACEPTADA` y `RECHAZADA`.
 
 ## Datos almacenados
 

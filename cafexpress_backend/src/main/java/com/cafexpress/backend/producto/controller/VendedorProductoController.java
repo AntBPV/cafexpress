@@ -4,15 +4,18 @@ import com.cafexpress.backend.producto.dto.ProductoRequest;
 import com.cafexpress.backend.producto.dto.ProductoResponse;
 import com.cafexpress.backend.producto.dto.ProductoUpdateRequest;
 import com.cafexpress.backend.producto.dto.MensajeResponse;
+import com.cafexpress.backend.producto.dto.PaginaResponse;
 import com.cafexpress.backend.producto.service.ProductoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.oauth2.jwt.Jwt;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
 import java.util.UUID;
 
 @RestController
@@ -36,10 +39,16 @@ public class VendedorProductoController {
     }
 
     @GetMapping
-    public List<ProductoResponse> listarPropios(
-            @AuthenticationPrincipal Jwt jwt
+    public PaginaResponse<ProductoResponse> listarPropios(
+            @AuthenticationPrincipal Jwt jwt,
+            @PageableDefault(
+                    size = 20,
+                    sort = "creadoEn",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
     ) {
-        return productoService.listarDelVendedor(idDesde(jwt));
+        return productoService.listarDelVendedor(idDesde(jwt), pageable);
     }
 
     @PutMapping("/{productoId}")

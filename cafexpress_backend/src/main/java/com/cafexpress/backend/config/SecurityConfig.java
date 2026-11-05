@@ -106,6 +106,12 @@ public class SecurityConfig {
                         )
                         .authenticated()
 
+                        .requestMatchers("/api/v1/alerta/**")
+                        .authenticated()
+
+                        .requestMatchers("/api/v1/productos")
+                        .authenticated()
+
                         .requestMatchers("/api/v1/vendedor/**")
                         .hasRole("VENDEDOR")
 

@@ -1,6 +1,7 @@
 package com.cafexpress.backend.common.exception;
 
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.ConstraintViolationException;
 import org.springframework.http.*;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -50,6 +51,31 @@ public class GlobalExceptionHandler {
                         "JSON invalido. El rol debe ser VENDEDOR o COMPRADOR.",
                         request.getRequestURI(),
                         Map.of()
+                )
+        );
+    }
+
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ApiError> parametrosInvalidos(
+            ConstraintViolationException ex,
+            HttpServletRequest request
+    ) {
+        Map<String, String> errores = new LinkedHashMap<>();
+
+        ex.getConstraintViolations().forEach(error ->
+                errores.putIfAbsent(
+                        error.getPropertyPath().toString(),
+                        error.getMessage()
+                )
+        );
+
+        return ResponseEntity.badRequest().body(
+                new ApiError(
+                        Instant.now(),
+                        400,
+                        "Revisa los parametros de la solicitud.",
+                        request.getRequestURI(),
+                        errores
                 )
         );
     }

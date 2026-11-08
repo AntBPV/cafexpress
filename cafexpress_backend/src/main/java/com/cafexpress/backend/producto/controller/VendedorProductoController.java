@@ -5,6 +5,7 @@ import com.cafexpress.backend.producto.dto.ProductoResponse;
 import com.cafexpress.backend.producto.dto.ProductoUpdateRequest;
 import com.cafexpress.backend.producto.dto.MensajeResponse;
 import com.cafexpress.backend.producto.dto.PaginaResponse;
+import com.cafexpress.backend.producto.enums.TipoProducto;
 import com.cafexpress.backend.producto.service.ProductoService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -17,6 +18,7 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/v1/vendedor/productos")
@@ -46,9 +48,16 @@ public class VendedorProductoController {
                     sort = "creadoEn",
                     direction = Sort.Direction.DESC
             )
-            Pageable pageable
+            Pageable pageable,
+            @RequestParam(name = "tipo", required = false) TipoProducto tipo,
+            @RequestParam(name = "lugarOrigen", required = false) String lugarOrigen,
+            @RequestParam(name = "paisOrigen", required = false) String paisOrigen,
+            @RequestParam(name = "precioMin", required = false) BigDecimal precioMin,
+            @RequestParam(name = "precioMax", required = false) BigDecimal precioMax
     ) {
-        return productoService.listarDelVendedor(idDesde(jwt), pageable);
+        return productoService.listarDelVendedor(
+                idDesde(jwt), tipo, lugarOrigen, paisOrigen, precioMin, precioMax, pageable
+        );
     }
 
     @PutMapping("/{productoId}")

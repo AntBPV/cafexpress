@@ -28,6 +28,11 @@ String statusLabel(String value) => switch (value) {
   'SOLICITADA' => 'Solicitada',
   'ACEPTADA' => 'Aceptada',
   'RECHAZADA' => 'Rechazada',
+  'CONFIRMADA' => 'Confirmada',
+  'EN_PREPARACION' => 'En preparación',
+  'EN_TRÁNSITO' || 'EN_TRANSITO' => 'En tránsito',
+  'ENVIADA' => 'Enviada',
+  'ENTREGADA' => 'Entregada',
   _ => value.toLowerCase().replaceAll('_', ' '),
 };
 
@@ -39,7 +44,7 @@ class Profile {
     required this.role,
     this.company,
     this.country,
-    this.verification,
+    this.username,
   });
   factory Profile.fromJson(Json json) {
     final role = string(json, 'rol');
@@ -53,11 +58,11 @@ class Profile {
       role: role,
       company: json['empresaProductor'] as String?,
       country: json['paisOrigen'] as String?,
-      verification: json['verificacion'] as String?,
+      username: json['username'] as String?,
     );
   }
   final String id, name, email, role;
-  final String? company, country, verification;
+  final String? company, country, username;
   bool get isSeller => role == 'VENDEDOR';
   bool get isComplete =>
       (company?.trim().isNotEmpty ?? false) &&
@@ -76,10 +81,14 @@ class Product {
     required this.price,
     required this.available,
     required this.seller,
+    this.type = 'CAFE',
+    this.variety,
   });
   factory Product.fromJson(Json json) => Product(
     id: string(json, 'id'),
     name: string(json, 'nombre'),
+    type: json['tipo'] as String? ?? 'CAFE',
+    variety: json['variedad'] as String?,
     unitAmount: json['cantidadUnitaria'] as num,
     unit: string(json, 'unidadCantidad'),
     availableAmount: json['cantidadDisponible'] as num,
@@ -92,6 +101,13 @@ class Product {
   final num unitAmount, availableAmount, price;
   final bool available;
   final Profile seller;
+  final String type;
+  final String? variety;
+  String get typeLabel => switch (type) {
+    'CAFE' => 'Café',
+    'CACAO' => 'Cacao',
+    _ => 'Variedad',
+  };
   String get unitLabel => unit == 'KILOGRAMOS' ? 'kg' : 'g';
   bool get canOrder => available && availableAmount > 0;
 }
@@ -113,10 +129,56 @@ class OrderSummary {
       productName = string(json, 'productoNombre'),
       state = string(json, 'estado'),
       quantity = json['cantidad'] as num,
-      created = DateTime.parse(string(json, 'creadoEn'));
+      unitPrice = json['precioUnitario'] as num?,
+      total = json['precioTotal'] as num?,
+      buyer = json['comprador'] == null
+          ? null
+          : Profile.fromJson(object(json['comprador'])),
+      seller = json['vendedor'] == null
+          ? null
+          : Profile.fromJson(object(json['vendedor'])),
+      created = DateTime.parse(string(json, 'creadoEn')),
+      events = [
+        ('Solicitada', DateTime.parse(string(json, 'creadoEn'))),
+        for (final entry in const {
+          'aceptadaEn': 'Aceptada',
+          'enPreparacionEn': 'En preparación',
+          'enviadaEn': 'Enviada',
+          'entregadaEn': 'Entregada',
+          'rechazadaEn': 'Rechazada',
+        }.entries)
+          if (json[entry.key] != null)
+            (entry.value, DateTime.parse(json[entry.key] as String)),
+      ];
   final String id, productId, productName, state;
   final num quantity;
+  final num? unitPrice, total;
+  final Profile? buyer, seller;
   final DateTime created;
+  final List<(String, DateTime)> events;
+  String? get nextAction => switch (state) {
+    'SOLICITADA' => 'aceptar',
+    'ACEPTADA' => 'preparar',
+    'EN_PREPARACION' => 'enviar',
+    'ENVIADA' => 'entregar',
+    _ => null,
+  };
+  String? get nextActionLabel => switch (state) {
+    'SOLICITADA' => 'Aceptar solicitud',
+    'ACEPTADA' => 'Iniciar preparación',
+    'EN_PREPARACION' => 'Marcar como enviada',
+    'ENVIADA' => 'Confirmar entrega',
+    _ => null,
+  };
+}
+
+class OrderPage {
+  OrderPage.fromJson(Json json)
+    : items = objects(json, 'content').map(OrderSummary.fromJson).toList(),
+      totalPages = (json['totalPages'] as num).toInt(),
+      total = (json['totalElements'] as num).toInt();
+  final List<OrderSummary> items;
+  final int totalPages, total;
 }
 
 class DashboardData {

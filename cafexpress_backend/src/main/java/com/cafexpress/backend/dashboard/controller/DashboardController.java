@@ -23,4 +23,8 @@ public class DashboardController {
     public DashboardAlertasResponse alertas(@AuthenticationPrincipal Jwt jwt) {
         return alertas.recientes(UUID.fromString(jwt.getSubject()));
     }
+    @GetMapping("/productos-relevantes")
+    public java.util.Map<String, ?> productosRelevantes(@AuthenticationPrincipal Jwt jwt) {
+        return java.util.Map.of("productos", dashboard.relevantes(UUID.fromString(jwt.getSubject())));
+    }
 }

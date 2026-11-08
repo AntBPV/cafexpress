@@ -69,6 +69,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
   String? _validateUsername(String? value) {
     final username = value?.trim() ?? '';
     if (username.isEmpty) return 'Elige un nombre de usuario.';
+    if (widget.springAuth &&
+        !RegExp(r'^[a-zA-Z0-9._-]{3,30}$').hasMatch(username)) {
+      return 'Usa de 3 a 30 letras, números, puntos o guiones.';
+    }
     if (RegExp(r'[\s@]').hasMatch(username)) {
       return 'Usa un nombre de usuario sin espacios ni @.';
     }
@@ -124,7 +128,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       final fields = [
         (_name, _nameFocus, _validateName),
-        if (!widget.springAuth) (_username, _usernameFocus, _validateUsername),
+        (_username, _usernameFocus, _validateUsername),
         (_email, _emailFocus, _validateEmail),
         (_password, _passwordFocus, _validatePassword),
         (_confirmation, _confirmationFocus, _validateConfirmation),
@@ -228,11 +232,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               validator: _validateName,
               onChanged: _clearError,
-              onFieldSubmitted: (_) =>
-                  (widget.springAuth ? _emailFocus : _usernameFocus)
-                      .requestFocus(),
+              onFieldSubmitted: (_) => _usernameFocus.requestFocus(),
             ),
-            if (!widget.springAuth) ...[
+            ...[
               const SizedBox(height: 24),
               TextFormField(
                 key: const Key('register-username'),

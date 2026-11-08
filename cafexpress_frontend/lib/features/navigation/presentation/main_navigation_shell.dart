@@ -108,7 +108,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-perfil',
           label: 'Perfil',
           title: 'Perfil del Vendedor',
-          description: 'Espacio de navegación reservado para el módulo de perfiles y certificado de calidad.',
+          description: 'Espacio de navegación reservado para el módulo de perfiles de vendedor.',
           icon: Icons.person_outline_rounded,
           selectedIcon: Icons.person_rounded,
         ),

@@ -53,6 +53,8 @@ class ProfilePage extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
                 const SizedBox(height: 24),
+                if (profile.username != null)
+                  _ProfileValue('Usuario', profile.username),
                 _ProfileValue('Correo electrónico', profile.email),
                 if (profile.isSeller) ...[
                   _ProfileValue('Empresa o productor', profile.company),

@@ -48,7 +48,7 @@ public class GlobalExceptionHandler {
                 new ApiError(
                         Instant.now(),
                         400,
-                        "JSON invalido. El rol debe ser VENDEDOR o COMPRADOR.",
+                        "JSON invalido. Revisa los tipos y valores enviados.",
                         request.getRequestURI(),
                         Map.of()
                 )

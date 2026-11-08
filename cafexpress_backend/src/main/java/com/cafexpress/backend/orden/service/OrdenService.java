@@ -39,10 +39,10 @@ public class OrdenService {
     @Transactional
     public OrdenResponse solicitar(CrearOrdenRequest request, UUID compradorId) {
         Usuario comprador = obtenerUsuario(compradorId, Rol.COMPRADOR);
-        Producto producto = productos.findById(request.productoId())
+        Producto producto = productos.findByIdForUpdate(request.productoId())
                 .orElseThrow(() -> productoNoEncontrado());
 
-        if (!producto.isDisponible()
+        if (!producto.getVendedor().isActivo() || !producto.isDisponible()
                 || producto.getCantidadDisponible().compareTo(request.cantidad()) < 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -60,12 +60,28 @@ public class OrdenService {
     }
 
     @Transactional(readOnly = true)
+    public OrdenResponse detalle(UUID ordenId, UUID usuarioId) {
+        return ordenes.buscarDeParticipante(ordenId, usuarioId).map(OrdenResponse::desde)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "La orden no existe o no pertenece a tu cuenta."));
+    }
+
+    @Transactional(readOnly = true)
     public Page<OrdenResponse> listarDelComprador(
             UUID compradorId,
             Pageable pageable
     ) {
         obtenerUsuario(compradorId, Rol.COMPRADOR);
-        return ordenes.findAllByCompradorId(compradorId, pageable)
+        return ordenes.findAllByCompradorIdAndActivoTrue(compradorId, pageable)
+                .map(OrdenResponse::desde);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrdenResponse> historialDelComprador(
+            UUID compradorId,
+            Pageable pageable
+    ) {
+        obtenerUsuario(compradorId, Rol.COMPRADOR);
+        return ordenes.findAllByCompradorIdAndActivoFalse(compradorId, pageable)
                 .map(OrdenResponse::desde);
     }
 
@@ -75,26 +91,28 @@ public class OrdenService {
             Pageable pageable
     ) {
         obtenerUsuario(vendedorId, Rol.VENDEDOR);
-        return ordenes.findAllByVendedorId(vendedorId, pageable)
+        return ordenes.findAllByVendedorIdAndActivoTrue(vendedorId, pageable)
+                .map(OrdenResponse::desde);
+    }
+
+    @Transactional(readOnly = true)
+    public Page<OrdenResponse> historialDelVendedor(
+            UUID vendedorId,
+            Pageable pageable
+    ) {
+        obtenerUsuario(vendedorId, Rol.VENDEDOR);
+        return ordenes.findAllByVendedorIdAndActivoFalse(vendedorId, pageable)
                 .map(OrdenResponse::desde);
     }
 
     @Transactional
     public OrdenResponse aceptar(UUID ordenId, UUID vendedorId) {
-        obtenerUsuario(vendedorId, Rol.VENDEDOR);
-        Orden orden = obtenerOrdenDelVendedor(ordenId, vendedorId);
-
-        if (orden.getEstado() != EstadoOrden.SOLICITADA) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "La orden ya fue resuelta."
-            );
-        }
+        Orden orden = obtenerOrdenParaAvanzar(ordenId, vendedorId, EstadoOrden.SOLICITADA);
 
         Producto producto = productos.findByIdForUpdate(orden.getProducto().getId())
                 .orElseThrow(() -> productoNoEncontrado());
 
-        if (!producto.isDisponible()
+        if (!producto.getVendedor().isActivo() || !producto.isDisponible()
                 || producto.getCantidadDisponible().compareTo(orden.getCantidad()) < 0) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
@@ -108,18 +126,35 @@ public class OrdenService {
     }
 
     @Transactional
+    public OrdenResponse ponerEnPreparacion(UUID ordenId, UUID vendedorId) {
+        return avanzar(ordenId, vendedorId, EstadoOrden.ACEPTADA, Orden::ponerEnPreparacion);
+    }
+
+    @Transactional
+    public OrdenResponse enviar(UUID ordenId, UUID vendedorId) {
+        return avanzar(ordenId, vendedorId, EstadoOrden.EN_PREPARACION, Orden::enviar);
+    }
+
+    @Transactional
+    public OrdenResponse entregar(UUID ordenId, UUID vendedorId) {
+        return avanzar(ordenId, vendedorId, EstadoOrden.ENVIADA, Orden::entregar);
+    }
+
+    @Transactional
     public OrdenResponse rechazar(UUID ordenId, UUID vendedorId) {
-        obtenerUsuario(vendedorId, Rol.VENDEDOR);
-        Orden orden = obtenerOrdenDelVendedor(ordenId, vendedorId);
-
-        if (orden.getEstado() != EstadoOrden.SOLICITADA) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "La orden ya fue resuelta."
-            );
-        }
-
+        Orden orden = obtenerOrdenParaAvanzar(ordenId, vendedorId, EstadoOrden.SOLICITADA);
         orden.rechazar();
+        return OrdenResponse.desde(orden);
+    }
+
+    private OrdenResponse avanzar(
+            UUID ordenId,
+            UUID vendedorId,
+            EstadoOrden estadoEsperado,
+            java.util.function.Consumer<Orden> transicion
+    ) {
+        Orden orden = obtenerOrdenParaAvanzar(ordenId, vendedorId, estadoEsperado);
+        transicion.accept(orden);
         return OrdenResponse.desde(orden);
     }
 
@@ -141,11 +176,27 @@ public class OrdenService {
     }
 
     private Orden obtenerOrdenDelVendedor(UUID ordenId, UUID vendedorId) {
-        return ordenes.findByIdAndVendedorId(ordenId, vendedorId)
+        return ordenes.bloquearDelVendedor(ordenId, vendedorId)
                 .orElseThrow(() -> new ResponseStatusException(
                         HttpStatus.NOT_FOUND,
                         "La orden no existe o no pertenece al vendedor."
                 ));
+    }
+
+    private Orden obtenerOrdenParaAvanzar(
+            UUID ordenId,
+            UUID vendedorId,
+            EstadoOrden estadoEsperado
+    ) {
+        obtenerUsuario(vendedorId, Rol.VENDEDOR);
+        Orden orden = obtenerOrdenDelVendedor(ordenId, vendedorId);
+        if (orden.getEstado() != estadoEsperado) {
+            throw new ResponseStatusException(
+                    HttpStatus.CONFLICT,
+                    "La orden debe estar en estado " + estadoEsperado + "."
+            );
+        }
+        return orden;
     }
 
     private ResponseStatusException productoNoEncontrado() {

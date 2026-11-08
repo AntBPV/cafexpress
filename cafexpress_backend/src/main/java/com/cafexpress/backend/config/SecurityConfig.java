@@ -105,9 +105,12 @@ public class SecurityConfig {
                                 "/api/v1/auth/me",
                                 "/api/v1/perfil",
                                 "/api/v1/dashboard",
+                                "/api/v1/dashboard/productos-relevantes",
                                 "/api/v1/dashboard/alertas"
                         )
                         .authenticated()
+
+                        .requestMatchers("/api/v1/ordenes/**").authenticated()
 
                         .requestMatchers("/api/v1/alerta/**")
                         .authenticated()

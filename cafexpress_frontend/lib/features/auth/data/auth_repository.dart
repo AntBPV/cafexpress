@@ -73,6 +73,7 @@ class HttpAuthRepository implements AuthRepository {
       body: {
         if (springAuth) ...{
           'nombre': name.trim(),
+          'username': username.trim(),
           'rol': role,
         } else ...{
           'name': name.trim(),

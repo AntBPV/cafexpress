@@ -1,6 +1,7 @@
 package com.cafexpress.backend.producto.entity;
 
 import com.cafexpress.backend.producto.enums.UnidadCantidad;
+import com.cafexpress.backend.producto.enums.TipoProducto;
 import com.cafexpress.backend.usuario.entity.Usuario;
 import jakarta.persistence.*;
 
@@ -18,6 +19,13 @@ public class Producto {
 
     @Column(nullable = false, length = 150)
     private String nombre;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false, length = 10)
+    private TipoProducto tipo;
+
+    @Column(length = 100)
+    private String variedad;
 
     @Column(name = "cantidad_unitaria", nullable = false, precision = 10, scale = 3)
     private BigDecimal cantidadUnitaria;
@@ -50,6 +58,8 @@ public class Producto {
 
     public Producto(
             String nombre,
+            TipoProducto tipo,
+            String variedad,
             BigDecimal cantidadUnitaria,
             UnidadCantidad unidadCantidad,
             BigDecimal cantidadDisponible,
@@ -59,6 +69,8 @@ public class Producto {
             Usuario vendedor
     ) {
         this.nombre = nombre;
+        this.tipo = tipo;
+        this.variedad = variedad;
         this.cantidadUnitaria = cantidadUnitaria;
         this.unidadCantidad = unidadCantidad;
         this.cantidadDisponible = cantidadDisponible;
@@ -70,6 +82,8 @@ public class Producto {
 
     public void actualizar(
             String nombre,
+            TipoProducto tipo,
+            String variedad,
             BigDecimal cantidadUnitaria,
             UnidadCantidad unidadCantidad,
             BigDecimal cantidadDisponible,
@@ -78,6 +92,8 @@ public class Producto {
             boolean disponible
     ) {
         this.nombre = nombre;
+        this.tipo = tipo;
+        this.variedad = variedad;
         this.cantidadUnitaria = cantidadUnitaria;
         this.unidadCantidad = unidadCantidad;
         this.cantidadDisponible = cantidadDisponible;
@@ -88,6 +104,8 @@ public class Producto {
 
     public void actualizarParcial(
             String nombre,
+            TipoProducto tipo,
+            String variedad,
             BigDecimal cantidadUnitaria,
             UnidadCantidad unidadCantidad,
             BigDecimal cantidadDisponible,
@@ -98,6 +116,8 @@ public class Producto {
         if (nombre != null) {
             this.nombre = nombre;
         }
+        if (tipo != null) { this.tipo = tipo; }
+        if (variedad != null) { this.variedad = variedad.strip(); }
         if (cantidadUnitaria != null) {
             this.cantidadUnitaria = cantidadUnitaria;
         }
@@ -134,8 +154,14 @@ public class Producto {
         return id;
     }
 
+    public String getVariedad() { return variedad; }
+
     public String getNombre() {
         return nombre;
+    }
+
+    public TipoProducto getTipo() {
+        return tipo;
     }
 
     public BigDecimal getCantidadUnitaria() {

@@ -50,8 +50,12 @@ public class AuthService {
         if (usuarios.existsByEmail(request.email())) {
             throw new ResponseStatusException(
                     HttpStatus.CONFLICT,
-                    "El correo ya esta registrado."
+                    "El usuario o correo ya esta registrado."
             );
+        }
+
+        if (request.username() != null && usuarios.existsByUsername(request.username())) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT, "El usuario ya esta registrado.");
         }
 
         Usuario usuario = new Usuario(
@@ -61,6 +65,7 @@ public class AuthService {
                 request.rol()
         );
 
+        usuario.asignarUsername(request.username());
         try {
             usuarios.saveAndFlush(usuario);
         } catch (DataIntegrityViolationException ex) {
@@ -69,7 +74,7 @@ public class AuthService {
                     && "23505".equals(sql.getSQLState())) {
                 throw new ResponseStatusException(
                         HttpStatus.CONFLICT,
-                        "El correo ya esta registrado."
+                        "El usuario o correo ya esta registrado."
                 );
             }
 
@@ -85,9 +90,9 @@ public class AuthService {
             throw credencialesInvalidas();
         }
 
-        Usuario usuario = usuarios
-                .findByEmail(request.email())
-                .orElse(null);
+        Usuario usuario = (request.email().contains("@")
+                ? usuarios.findByEmail(request.email())
+                : usuarios.findByUsername(request.email())).orElse(null);
 
         String hash = usuario == null
                 ? hashSimulado
@@ -116,7 +121,7 @@ public class AuthService {
     private ResponseStatusException credencialesInvalidas() {
         return new ResponseStatusException(
                 HttpStatus.UNAUTHORIZED,
-                "Correo o contrasena incorrectos."
+                "Usuario, correo o contrasena incorrectos."
         );
     }
 }

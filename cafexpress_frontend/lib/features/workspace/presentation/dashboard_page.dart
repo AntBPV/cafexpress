@@ -1,11 +1,10 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/network/api_exception.dart';
-
 import '../data/marketplace_repository.dart';
 import '../domain/marketplace_models.dart';
-import 'product_pages.dart';
+import 'order_pages.dart';
 import 'workspace_widgets.dart';
+import 'climate_panel.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({
@@ -148,211 +147,13 @@ class DashboardPage extends StatelessWidget {
         for (final order in data.orders)
           OrderRow(
             order: order,
-            onTap: () => openProduct(
-              context,
-              repository,
-              order.productId,
-              onSessionExpired,
-            ),
+            onTap: () async {
+              await openOrder(context, repository, order.id, onSessionExpired);
+              if (context.mounted) await reload();
+            },
           ),
-        const SectionTitle('Alertas de tus productos'),
-        AlertsPanel(repository: repository, onSessionExpired: onSessionExpired),
-      ],
-    ),
-  );
-}
-
-class AlertsPanel extends StatefulWidget {
-  const AlertsPanel({
-    super.key,
-    required this.repository,
-    required this.onSessionExpired,
-  });
-  final MarketplaceRepository repository;
-  final VoidCallback onSessionExpired;
-  @override
-  State<AlertsPanel> createState() => _AlertsPanelState();
-}
-
-class _AlertsPanelState extends State<AlertsPanel> {
-  late Future<AlertsData> _future;
-  @override
-  void initState() {
-    super.initState();
-    _future = widget.repository.alerts();
-  }
-
-  void _refresh() => setState(() => _future = widget.repository.alerts());
-  @override
-  Widget build(BuildContext context) => FutureBuilder<AlertsData>(
-    future: _future,
-    builder: (context, snapshot) {
-      if (snapshot.connectionState != ConnectionState.done) {
-        return const Padding(
-          padding: EdgeInsets.symmetric(vertical: 24),
-          child: Column(
-            children: [
-              LinearProgressIndicator(
-                semanticsLabel: 'Consultando alertas climáticas',
-              ),
-              SizedBox(height: 12),
-              Text('Consultando el clima de los orígenes relevantes…'),
-            ],
-          ),
-        );
-      }
-      if (snapshot.hasError) {
-        final error = snapshot.error;
-        if (error is ApiException && error.statusCode == 401) {
-          return Column(
-            children: [
-              const InfoNotice(
-                'Tu sesión terminó. Inicia sesión para consultar las alertas.',
-              ),
-              TextButton(
-                onPressed: widget.onSessionExpired,
-                child: const Text('Volver al inicio de sesión'),
-              ),
-            ],
-          );
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const InfoNotice(
-              'No pudimos consultar las alertas. El resto de tus datos está disponible.',
-            ),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
-                onPressed: _refresh,
-                icon: const Icon(Icons.refresh),
-                label: const Text('Reintentar alertas'),
-              ),
-            ),
-          ],
-        );
-      }
-      final data = snapshot.requireData;
-      return Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (data.alerts.isEmpty && data.notices.isEmpty)
-            EmptyMessage(
-              icon: Icons.wb_cloudy_outlined,
-              title: 'Sin alertas para mostrar',
-              message: widget.repository.isSeller
-                  ? 'Las consultas de clima se relacionan con el origen de tus productos activos.'
-                  : 'Aquí aparecerá el clima de productos que hayas visto o solicitado.',
-            ),
-          for (final notice in data.notices)
-            Padding(
-              padding: const EdgeInsets.only(bottom: 12),
-              child: InfoNotice(notice),
-            ),
-          for (final alert in data.alerts)
-            Card.outlined(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () => openProduct(
-                  context,
-                  widget.repository,
-                  alert.productId,
-                  widget.onSessionExpired,
-                ),
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          ExcludeSemantics(
-                            child: Icon(
-                              alert.favourable
-                                  ? Icons.wb_sunny_outlined
-                                  : Icons.cloud_outlined,
-                              color: Theme.of(context).colorScheme.primary,
-                            ),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              alert.productName,
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text('${alert.origin} · ${number(alert.temperature)} °C'),
-                      const SizedBox(height: 12),
-                      Text(alert.message),
-                      const SizedBox(height: 12),
-                      Text(
-                        'Consultado ${date(alert.observed)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                    ],
-                  ),
-                ),
-              ),
-            ),
-          const SizedBox(height: 12),
-          const Text(
-            'Fuente: Open-Meteo. Referencia climática para café; los precios no se modifican automáticamente.',
-          ),
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton.icon(
-              onPressed: _refresh,
-              icon: const Icon(Icons.refresh),
-              label: const Text('Actualizar alertas'),
-            ),
-          ),
-        ],
-      );
-    },
-  );
-}
-
-class OrdersReadPage extends StatelessWidget {
-  const OrdersReadPage({
-    super.key,
-    required this.repository,
-    required this.onSessionExpired,
-  });
-  final MarketplaceRepository repository;
-  final VoidCallback onSessionExpired;
-  @override
-  Widget build(BuildContext context) => RemoteView<List<OrderSummary>>(
-    load: repository.orders,
-    onSessionExpired: onSessionExpired,
-    builder: (orders, reload) => PageBody(
-      onRefresh: reload,
-      children: [
-        PageHeading(
-          title: repository.isSeller ? 'Órdenes recibidas' : 'Mis órdenes',
-          description:
-              'Las últimas 20 solicitudes de esta cuenta y su estado actual.',
-          onRefresh: reload,
-        ),
-        if (orders.isEmpty)
-          const EmptyMessage(
-            title: 'Aún no hay órdenes',
-            message: 'Tus solicitudes aparecerán aquí.',
-          ),
-        for (final order in orders)
-          OrderRow(
-            order: order,
-            onTap: () => openProduct(
-              context,
-              repository,
-              order.productId,
-              onSessionExpired,
-            ),
-          ),
+        const SectionTitle('Clima y tendencia de precios'),
+        ClimatePanel(onSessionExpired: onSessionExpired),
       ],
     ),
   );

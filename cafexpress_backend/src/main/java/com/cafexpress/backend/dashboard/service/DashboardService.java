@@ -35,7 +35,9 @@ public class DashboardService {
         for (Object[] row : vendedor ? ordenes.resumenVendedor(id) : ordenes.resumenComprador(id)) {
             estados.put(row[0].toString(), ((Number) row[1]).longValue());
         }
-        long activas = estados.get("SOLICITADA") + estados.get("ACEPTADA");
+        long activas = estados.entrySet().stream()
+                .filter(entry -> !Set.of("ENTREGADA", "RECHAZADA").contains(entry.getKey()))
+                .mapToLong(Map.Entry::getValue).sum();
         var pagina = PageRequest.of(0, 5, Sort.by(Sort.Direction.DESC, "creadoEn"));
         var recientes = vendedor ? ordenes.findAllByVendedorId(id, pagina)
                 : ordenes.findAllByCompradorId(id, pagina);
@@ -47,7 +49,7 @@ public class DashboardService {
     @Transactional(readOnly = true)
     public List<ProductoResponse> relevantes(UUID id) {
         if (perfiles.obtener(id).getRol() == Rol.VENDEDOR) {
-            return productos.findAllByVendedorId(id, PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "creadoEn")))
+            return productos.buscarDelVendedor(id, null, null, null, null, null, PageRequest.of(0, 100, Sort.by(Sort.Direction.DESC, "creadoEn")))
                     .stream().filter(p -> p.isDisponible()).map(ProductoResponse::desde).toList();
         }
         Set<UUID> ids = new LinkedHashSet<>(consultas.recientes(id));

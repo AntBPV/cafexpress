@@ -1,0 +1,2 @@
+ALTER TABLE productos ADD COLUMN variedad VARCHAR(100);
+UPDATE ordenes SET activo = estado IN ('SOLICITADA', 'ACEPTADA', 'EN_PREPARACION', 'ENVIADA');

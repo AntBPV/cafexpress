@@ -20,6 +20,9 @@ public class Usuario {
     @Column(nullable = false, unique = true, length = 254)
     private String email;
 
+    @Column(length = 30)
+    private String username;
+
     @Column(name = "password_hash", nullable = false, length = 255)
     private String passwordHash;
 
@@ -61,6 +64,10 @@ public class Usuario {
     public String getNombre() {
         return nombre;
     }
+
+    public String getUsername() { return username; }
+
+    public void asignarUsername(String username) { this.username = username; }
 
     public String getEmail() {
         return email;

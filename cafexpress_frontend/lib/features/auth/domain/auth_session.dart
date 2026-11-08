@@ -6,6 +6,7 @@ class AuthSession {
     this.name,
     this.email,
     this.role,
+    this.userId,
   });
 
   factory AuthSession.fromJson(Map<String, dynamic> json) {
@@ -23,9 +24,11 @@ class AuthSession {
     final name = userData?['name'] ?? userData?['nombre'];
     final email = userData?['email'];
     final role = userData?['role'] ?? userData?['rol'];
+    final id = userData?['id'];
     if ((name != null && name is! String) ||
         (email != null && email is! String) ||
-        (role != null && role is! String)) {
+        (role != null && role is! String) ||
+        (id != null && id is! String)) {
       throw const FormatException('Datos de usuario no válidos.');
     }
     return AuthSession(
@@ -34,6 +37,7 @@ class AuthSession {
       name: name as String?,
       email: email as String?,
       role: role as String?,
+      userId: id as String?,
     );
   }
 
@@ -42,6 +46,7 @@ class AuthSession {
   final String? name;
   final String? email;
   final String? role;
+  final String? userId;
 
   String get authorizationHeader => '$tokenType $accessToken';
 }

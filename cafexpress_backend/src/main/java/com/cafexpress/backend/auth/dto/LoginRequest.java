@@ -6,8 +6,7 @@ import java.util.Locale;
 
 public record LoginRequest(
 
-        @NotBlank(message = "El correo es obligatorio.")
-        @Email(message = "Ingresa un correo valido.")
+        @NotBlank(message = "El usuario o correo es obligatorio.")
         @Size(max = 254)
         String email,
 

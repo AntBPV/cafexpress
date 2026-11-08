@@ -44,6 +44,28 @@ class ApiClient {
     required String authorization,
   }) => _request('PUT', path, body: body, authorization: authorization);
 
+  Future<Map<String, dynamic>> patchJson(
+    String path, {
+    required String authorization,
+    Map<int, String> errorMessages = const {},
+  }) => _request(
+    'PATCH',
+    path,
+    authorization: authorization,
+    errorMessages: errorMessages,
+  );
+
+  Future<Map<String, dynamic>> deleteJson(
+    String path, {
+    required String authorization,
+    Map<int, String> errorMessages = const {},
+  }) => _request(
+    'DELETE',
+    path,
+    authorization: authorization,
+    errorMessages: errorMessages,
+  );
+
   Future<Map<String, dynamic>> _request(
     String method,
     String path, {

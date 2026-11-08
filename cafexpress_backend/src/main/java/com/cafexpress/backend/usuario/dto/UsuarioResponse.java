@@ -11,7 +11,8 @@ public record UsuarioResponse(
         String email,
         Rol rol,
         String empresaProductor,
-        String paisOrigen
+        String paisOrigen,
+        String username
 ) {
 
     public static UsuarioResponse desde(Usuario usuario) {
@@ -21,7 +22,8 @@ public record UsuarioResponse(
                 usuario.getEmail(),
                 usuario.getRol(),
                 usuario.getEmpresaProductor(),
-                usuario.getPaisOrigen()
+                usuario.getPaisOrigen(),
+                usuario.getUsername()
         );
     }
 }

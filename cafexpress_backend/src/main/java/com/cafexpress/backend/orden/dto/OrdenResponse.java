@@ -13,11 +13,19 @@ public record OrdenResponse(
         UUID productoId,
         String productoNombre,
         BigDecimal cantidad,
+        BigDecimal precioUnitario,
+        BigDecimal precioTotal,
         EstadoOrden estado,
+        boolean activo,
         UsuarioResponse comprador,
         UsuarioResponse vendedor,
         Instant creadoEn,
-        Instant resueltoEn
+        Instant resueltoEn,
+        Instant aceptadaEn,
+        Instant enPreparacionEn,
+        Instant enviadaEn,
+        Instant entregadaEn,
+        Instant rechazadaEn
 ) {
 
     public static OrdenResponse desde(Orden orden) {
@@ -26,11 +34,19 @@ public record OrdenResponse(
                 orden.getProducto().getId(),
                 orden.getProducto().getNombre(),
                 orden.getCantidad(),
+                orden.getPrecioUnitario(),
+                orden.getPrecioTotal(),
                 orden.getEstado(),
+                orden.isActivo(),
                 UsuarioResponse.desde(orden.getComprador()),
                 UsuarioResponse.desde(orden.getVendedor()),
                 orden.getCreadoEn(),
-                orden.getResueltoEn()
+                orden.getResueltoEn(),
+                orden.getAceptadaEn(),
+                orden.getEnPreparacionEn(),
+                orden.getEnviadaEn(),
+                orden.getEntregadaEn(),
+                orden.getRechazadaEn()
         );
     }
 }

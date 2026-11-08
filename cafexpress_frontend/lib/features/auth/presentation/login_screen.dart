@@ -52,11 +52,9 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _validateIdentifier(String? value) {
     final identifier = value?.trim() ?? '';
     if (identifier.isEmpty) {
-      return widget.springAuth
-          ? 'Escribe tu correo electrónico.'
-          : 'Escribe tu usuario o correo electrónico.';
+      return 'Escribe tu usuario o correo electrónico.';
     }
-    if ((widget.springAuth || identifier.contains('@')) &&
+    if (identifier.contains('@') &&
         !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(identifier)) {
       return 'Escribe un correo electrónico válido.';
     }
@@ -274,18 +272,12 @@ class _LoginScreenState extends State<LoginScreen> {
               autocorrect: false,
               enableSuggestions: false,
               textCapitalization: TextCapitalization.none,
-              keyboardType: widget.springAuth
-                  ? TextInputType.emailAddress
-                  : TextInputType.text,
+              keyboardType: TextInputType.text,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.username],
               decoration: InputDecoration(
-                labelText: widget.springAuth
-                    ? 'Correo electrónico'
-                    : 'Usuario o correo',
-                hintText: widget.springAuth
-                    ? 'tu@correo.com'
-                    : 'Usuario o correo',
+                labelText: 'Usuario o correo',
+                hintText: 'Usuario o correo',
                 prefixIcon: const Icon(Icons.person_outline_rounded),
               ),
               validator: _validateIdentifier,

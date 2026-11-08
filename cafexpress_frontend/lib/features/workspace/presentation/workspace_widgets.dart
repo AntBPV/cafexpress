@@ -26,8 +26,11 @@ class _RemoteViewState<T> extends State<RemoteView<T>> {
   }
 
   Future<void> _reload() async {
+    if (!mounted) return;
     final next = Future<T>.sync(widget.load);
-    setState(() => _future = next);
+    setState(() {
+      _future = next;
+    });
     try {
       await next;
     } catch (_) {
@@ -274,6 +277,8 @@ class OrderRow extends StatelessWidget {
                   Text('Cantidad: ${number(order.quantity)}'),
                   Text('Estado: ${statusLabel(order.state)}'),
                   Text(date(order.created)),
+                  if (order.total != null)
+                    Text('Total: ${number(order.total!)}'),
                 ],
               ),
             ],

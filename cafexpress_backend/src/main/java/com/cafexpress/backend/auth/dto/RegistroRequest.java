@@ -25,11 +25,15 @@ public record RegistroRequest(
         String password,
 
         @NotNull(message = "Selecciona VENDEDOR o COMPRADOR.")
-        Rol rol
+        Rol rol,
+
+        @Pattern(regexp = "[a-z0-9._-]{3,30}", message = "Usa de 3 a 30 letras, números, puntos, guiones o guiones bajos.")
+        String username
 
 ) {
 
     public RegistroRequest {
+        username = username == null ? null : username.strip().toLowerCase(Locale.ROOT);
         nombre = nombre == null ? null : nombre.strip();
 
         email = email == null

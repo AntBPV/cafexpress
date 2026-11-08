@@ -38,7 +38,15 @@ class RegisteredAccount {
         name.trim().isEmpty) {
       throw const FormatException('Datos de la cuenta no válidos.');
     }
-    return RegisteredAccount(email: email.trim(), name: name.trim());
+    final username = user['username'];
+    if (username != null && (username is! String || username.trim().isEmpty)) {
+      throw const FormatException('Usuario no válido.');
+    }
+    return RegisteredAccount(
+      email: email.trim(),
+      name: name.trim(),
+      username: username as String?,
+    );
   }
 
   final String? username;

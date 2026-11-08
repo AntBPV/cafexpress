@@ -5,6 +5,7 @@ import com.cafexpress.backend.producto.dto.PaginaResponse;
 import com.cafexpress.backend.producto.dto.ProductoResponse;
 import com.cafexpress.backend.producto.dto.ProductoUpdateRequest;
 import com.cafexpress.backend.producto.entity.Producto;
+import com.cafexpress.backend.producto.enums.TipoProducto;
 import com.cafexpress.backend.producto.repository.ProductoRepository;
 import com.cafexpress.backend.usuario.entity.Usuario;
 import com.cafexpress.backend.usuario.enums.Rol;
@@ -17,6 +18,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
+import java.math.BigDecimal;
 
 @Service
 public class ProductoService {
@@ -38,6 +40,7 @@ public class ProductoService {
 
         Producto producto = productos.save(new Producto(
                 request.nombre().trim(),
+                request.tipo(),
                 request.cantidadUnitaria(),
                 request.unidadCantidad(),
                 request.cantidadDisponible(),
@@ -51,9 +54,16 @@ public class ProductoService {
     }
 
     @Transactional(readOnly = true)
-    public PaginaResponse<ProductoResponse> listarDisponibles(Pageable pageable) {
+    public PaginaResponse<ProductoResponse> listarDisponibles(
+            TipoProducto tipo,
+            String lugarOrigen,
+            BigDecimal precioMin,
+            BigDecimal precioMax,
+            Pageable pageable
+    ) {
+        validarRangoPrecio(precioMin, precioMax);
         Page<ProductoResponse> pagina = productos
-                .findAllByDisponibleTrue(pageable)
+                .buscarDisponibles(tipo, normalizarLugarOrigen(lugarOrigen), precioMin, precioMax, pageable)
                 .map(ProductoResponse::desde);
 
         return PaginaResponse.desde(pagina);
@@ -62,12 +72,24 @@ public class ProductoService {
     @Transactional(readOnly = true)
     public PaginaResponse<ProductoResponse> listarDelVendedor(
             UUID vendedorId,
+            TipoProducto tipo,
+            String lugarOrigen,
+            BigDecimal precioMin,
+            BigDecimal precioMax,
             Pageable pageable
     ) {
         obtenerVendedor(vendedorId);
+        validarRangoPrecio(precioMin, precioMax);
 
         Page<ProductoResponse> pagina = productos
-                .findAllByVendedorId(vendedorId, pageable)
+                .buscarDelVendedor(
+                        vendedorId,
+                        tipo,
+                        normalizarLugarOrigen(lugarOrigen),
+                        precioMin,
+                        precioMax,
+                        pageable
+                )
                 .map(ProductoResponse::desde);
 
         return PaginaResponse.desde(pagina);
@@ -96,6 +118,7 @@ public class ProductoService {
         Producto producto = obtenerProductoDelVendedor(productoId, vendedorId);
         producto.actualizarParcial(
                 request.nombre() == null ? null : request.nombre().trim(),
+                request.tipo(),
                 request.cantidadUnitaria(),
                 request.unidadCantidad(),
                 request.cantidadDisponible(),
@@ -105,6 +128,26 @@ public class ProductoService {
         );
 
         return ProductoResponse.desde(producto);
+    }
+
+    private void validarRangoPrecio(BigDecimal precioMin, BigDecimal precioMax) {
+        if (precioMin != null && precioMin.signum() < 0
+                || precioMax != null && precioMax.signum() < 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "Los precios del filtro no pueden ser negativos."
+            );
+        }
+        if (precioMin != null && precioMax != null && precioMin.compareTo(precioMax) > 0) {
+            throw new ResponseStatusException(
+                    HttpStatus.BAD_REQUEST,
+                    "El precio minimo no puede ser mayor que el precio maximo."
+            );
+        }
+    }
+
+    private String normalizarLugarOrigen(String lugarOrigen) {
+        return lugarOrigen == null || lugarOrigen.isBlank() ? null : lugarOrigen.trim();
     }
 
     @Transactional

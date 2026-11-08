@@ -81,11 +81,18 @@ y el máximo es 100. Por ejemplo:
 
 `GET /api/v1/productos?page=0&size=20&sort=creadoEn,desc`
 
+También aceptan los filtros opcionales `tipo` (`CAFE`, `CACAO` o
+`VARIEDAD`), `lugarOrigen`, `precioMin` y `precioMax`. Los filtros pueden
+combinarse y conservan la paginación; por ejemplo:
+
+`GET /api/v1/productos?tipo=CAFE&lugarOrigen=Huila&precioMin=10&precioMax=50&page=0&size=20`
+
 La respuesta contiene los productos en `content` y los metadatos
 `page`, `size`, `totalElements`, `totalPages`, `first` y `last`.
 
 El cuerpo de creación y actualización contiene `nombre`,
-`cantidadUnitaria`, `unidadCantidad` (`GRAMOS` o `KILOGRAMOS`),
+`tipo` (`CAFE`, `CACAO` o `VARIEDAD`), `cantidadUnitaria`,
+`unidadCantidad` (`GRAMOS` o `KILOGRAMOS`),
 `cantidadDisponible`, `lugarOrigen`, `precioUnitario` y `disponible`.
 Cada producto queda vinculado al vendedor autenticado. La implementación
 solo administra el catálogo; no realiza pagos ni transacciones reales.

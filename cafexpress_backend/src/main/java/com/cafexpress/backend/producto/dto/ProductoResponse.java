@@ -2,6 +2,7 @@ package com.cafexpress.backend.producto.dto;
 
 import com.cafexpress.backend.producto.entity.Producto;
 import com.cafexpress.backend.producto.enums.UnidadCantidad;
+import com.cafexpress.backend.producto.enums.TipoProducto;
 import com.cafexpress.backend.usuario.dto.UsuarioResponse;
 
 import java.math.BigDecimal;
@@ -11,6 +12,7 @@ import java.util.UUID;
 public record ProductoResponse(
         UUID id,
         String nombre,
+        TipoProducto tipo,
         BigDecimal cantidadUnitaria,
         UnidadCantidad unidadCantidad,
         BigDecimal cantidadDisponible,
@@ -25,6 +27,7 @@ public record ProductoResponse(
         return new ProductoResponse(
                 producto.getId(),
                 producto.getNombre(),
+                producto.getTipo(),
                 producto.getCantidadUnitaria(),
                 producto.getUnidadCantidad(),
                 producto.getCantidadDisponible(),

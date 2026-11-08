@@ -1,6 +1,7 @@
 package com.cafexpress.backend.producto.dto;
 
 import com.cafexpress.backend.producto.enums.UnidadCantidad;
+import com.cafexpress.backend.producto.enums.TipoProducto;
 import jakarta.validation.constraints.*;
 
 import java.math.BigDecimal;
@@ -9,6 +10,9 @@ public record ProductoRequest(
         @NotBlank
         @Size(max = 150)
         String nombre,
+
+        @NotNull
+        TipoProducto tipo,
 
         @NotNull
         @Positive

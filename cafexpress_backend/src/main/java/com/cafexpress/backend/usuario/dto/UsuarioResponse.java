@@ -9,7 +9,9 @@ public record UsuarioResponse(
         UUID id,
         String nombre,
         String email,
-        Rol rol
+        Rol rol,
+        String empresaProductor,
+        String paisOrigen
 ) {
 
     public static UsuarioResponse desde(Usuario usuario) {
@@ -17,7 +19,9 @@ public record UsuarioResponse(
                 usuario.getId(),
                 usuario.getNombre(),
                 usuario.getEmail(),
-                usuario.getRol()
+                usuario.getRol(),
+                usuario.getEmpresaProductor(),
+                usuario.getPaisOrigen()
         );
     }
 }

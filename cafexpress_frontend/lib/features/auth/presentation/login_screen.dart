@@ -4,6 +4,8 @@ import 'package:flutter/services.dart';
 import '../../../core/network/api_exception.dart';
 import '../../navigation/domain/user_role.dart';
 import '../../navigation/presentation/main_navigation_shell.dart';
+import '../../workspace/data/marketplace_repository.dart';
+import '../../workspace/presentation/session_workspace.dart';
 import '../data/auth_repository.dart';
 import '../domain/auth_session.dart';
 import '../domain/registered_account.dart';
@@ -14,6 +16,11 @@ import 'widgets/auth_scaffold.dart';
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.authRepository});
   final AuthRepository authRepository;
+
+  bool get springAuth => switch (authRepository) {
+    HttpAuthRepository(:final springAuth) => springAuth,
+    _ => false,
+  };
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -44,8 +51,12 @@ class _LoginScreenState extends State<LoginScreen> {
 
   String? _validateIdentifier(String? value) {
     final identifier = value?.trim() ?? '';
-    if (identifier.isEmpty) return 'Escribe tu usuario o correo electrónico.';
-    if (identifier.contains('@') &&
+    if (identifier.isEmpty) {
+      return widget.springAuth
+          ? 'Escribe tu correo electrónico.'
+          : 'Escribe tu usuario o correo electrónico.';
+    }
+    if ((widget.springAuth || identifier.contains('@')) &&
         !RegExp(r'^[^\s@]+@[^\s@]+\.[^\s@]+$').hasMatch(identifier)) {
       return 'Escribe un correo electrónico válido.';
     }
@@ -77,7 +88,10 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     final account = await Navigator.of(context).push<RegisteredAccount>(
       MaterialPageRoute(
-        builder: (_) => RegisterScreen(authRepository: widget.authRepository),
+        builder: (_) => RegisterScreen(
+          authRepository: widget.authRepository,
+          springAuth: widget.springAuth,
+        ),
       ),
     );
     if (!mounted) return;
@@ -85,7 +99,7 @@ class _LoginScreenState extends State<LoginScreen> {
     setState(() {
       _isOpeningRegister = false;
       if (account != null) {
-        _identifier.text = account.username;
+        _identifier.text = account.username ?? account.email;
         _password.clear();
         _hasSubmitted = false;
         _registrationMessage = 'Cuenta creada. Inicia sesión para continuar.';
@@ -98,16 +112,26 @@ class _LoginScreenState extends State<LoginScreen> {
     final role = UserRole.tryParse(session?.role) ?? UserRole.comprador;
     await Navigator.of(context).push<void>(
       MaterialPageRoute(
-        builder: (routeContext) => MainNavigationShell(
-          userName: session?.name,
-          initialRole: role,
-          onSignOut: () {
-            Navigator.of(routeContext).pop();
-            if (mounted && _session != null) {
-              _signOut();
-            }
-          },
-        ),
+        builder: (routeContext) {
+          void signOut() {
+            Navigator.of(routeContext).popUntil((route) => route.isFirst);
+            if (mounted && _session != null) _signOut();
+          }
+
+          if (session != null && widget.springAuth) {
+            final auth = widget.authRepository as HttpAuthRepository;
+            return SessionWorkspace(
+              repository: MarketplaceRepository(auth.api, session),
+              onSignOut: signOut,
+            );
+          }
+          return MainNavigationShell(
+            userName: session?.name,
+            initialRole: role,
+            allowRolePreview: session == null,
+            onSignOut: signOut,
+          );
+        },
       ),
     );
   }
@@ -212,17 +236,18 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
             ),
             const SizedBox(height: 8),
-            TextButton(
-              key: const Key('login-preview-navigation'),
-              style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
-              onPressed: _isSubmitting || _isOpeningRegister
-                  ? null
-                  : () => _openNavigationShell(),
-              child: const Text(
-                'Explorar interfaz de navegación',
-                textAlign: TextAlign.center,
+            if (!widget.springAuth)
+              TextButton(
+                key: const Key('login-preview-navigation'),
+                style: TextButton.styleFrom(minimumSize: const Size(0, 48)),
+                onPressed: _isSubmitting || _isOpeningRegister
+                    ? null
+                    : () => _openNavigationShell(),
+                child: const Text(
+                  'Explorar interfaz de navegación',
+                  textAlign: TextAlign.center,
+                ),
               ),
-            ),
           ],
         ],
       ),
@@ -249,13 +274,19 @@ class _LoginScreenState extends State<LoginScreen> {
               autocorrect: false,
               enableSuggestions: false,
               textCapitalization: TextCapitalization.none,
-              keyboardType: TextInputType.text,
+              keyboardType: widget.springAuth
+                  ? TextInputType.emailAddress
+                  : TextInputType.text,
               textInputAction: TextInputAction.next,
               autofillHints: const [AutofillHints.username],
-              decoration: const InputDecoration(
-                labelText: 'Usuario o correo',
-                hintText: 'Usuario o correo',
-                prefixIcon: Icon(Icons.person_outline_rounded),
+              decoration: InputDecoration(
+                labelText: widget.springAuth
+                    ? 'Correo electrónico'
+                    : 'Usuario o correo',
+                hintText: widget.springAuth
+                    ? 'tu@correo.com'
+                    : 'Usuario o correo',
+                prefixIcon: const Icon(Icons.person_outline_rounded),
               ),
               validator: _validateIdentifier,
               onChanged: _clearError,

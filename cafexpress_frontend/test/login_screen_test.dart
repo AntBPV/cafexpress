@@ -25,6 +25,7 @@ class ControlledAuthRepository implements AuthRepository {
     required String username,
     required String email,
     required String password,
+    String? role,
   }) async => throw UnimplementedError('Este doble solo prueba el login.');
 
   @override

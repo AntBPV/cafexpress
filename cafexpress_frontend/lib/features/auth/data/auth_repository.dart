@@ -14,6 +14,7 @@ abstract interface class AuthRepository {
     required String username,
     required String email,
     required String password,
+    String? role,
   });
 }
 
@@ -21,6 +22,8 @@ class HttpAuthRepository implements AuthRepository {
   const HttpAuthRepository(this._api);
 
   final ApiClient _api;
+  bool get springAuth => _api.config.springAuth;
+  ApiClient get api => _api;
 
   @override
   Future<AuthSession> signIn({
@@ -29,7 +32,10 @@ class HttpAuthRepository implements AuthRepository {
   }) async {
     final json = await _api.postJson(
       _api.config.loginPath,
-      body: {'identifier': identifier.trim(), 'password': password},
+      body: {
+        springAuth ? 'email' : 'identifier': identifier.trim(),
+        'password': password,
+      },
       unavailableMessage:
           'El inicio de sesión aún no está disponible. Inténtalo más tarde.',
       invalidResponseMessage:
@@ -40,7 +46,13 @@ class HttpAuthRepository implements AuthRepository {
       },
     );
     try {
-      return AuthSession.fromJson(json);
+      final session = AuthSession.fromJson(json);
+      if (springAuth &&
+          session.role != 'COMPRADOR' &&
+          session.role != 'VENDEDOR') {
+        throw const FormatException('Rol de la sesión inválido.');
+      }
+      return session;
     } on FormatException {
       throw const ApiException(
         'No pudimos completar el acceso. Inténtalo de nuevo más tarde.',
@@ -54,12 +66,18 @@ class HttpAuthRepository implements AuthRepository {
     required String username,
     required String email,
     required String password,
+    String? role,
   }) async {
     final json = await _api.postJson(
       _api.config.registerPath,
       body: {
-        'name': name.trim(),
-        'username': username.trim(),
+        if (springAuth) ...{
+          'nombre': name.trim(),
+          'rol': role,
+        } else ...{
+          'name': name.trim(),
+          'username': username.trim(),
+        },
         'email': email.trim(),
         'password': password,
       },
@@ -74,7 +92,9 @@ class HttpAuthRepository implements AuthRepository {
       },
     );
     try {
-      return RegisteredAccount.fromJson(json);
+      return springAuth
+          ? RegisteredAccount.fromSpringJson(json)
+          : RegisteredAccount.fromJson(json);
     } on FormatException {
       throw const ApiException(
         'No pudimos completar el registro. Inténtalo de nuevo más tarde.',

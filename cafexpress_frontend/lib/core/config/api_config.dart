@@ -4,24 +4,30 @@ class ApiConfig {
     this.baseUrl = '',
     this.loginPath = '/api/auth/login',
     this.registerPath = '/api/auth/register',
+    this.springAuth = false,
     this.timeout = const Duration(seconds: 15),
   });
 
-  factory ApiConfig.fromEnvironment() => const ApiConfig(
-    baseUrl: String.fromEnvironment('API_BASE_URL'),
-    loginPath: String.fromEnvironment(
-      'AUTH_LOGIN_PATH',
-      defaultValue: '/api/auth/login',
-    ),
-    registerPath: String.fromEnvironment(
-      'AUTH_REGISTER_PATH',
-      defaultValue: '/api/auth/register',
-    ),
-  );
+  factory ApiConfig.fromEnvironment() {
+    const springAuth = bool.fromEnvironment('SPRING_AUTH');
+    const login = String.fromEnvironment('AUTH_LOGIN_PATH');
+    const register = String.fromEnvironment('AUTH_REGISTER_PATH');
+    return ApiConfig(
+      baseUrl: const String.fromEnvironment('API_BASE_URL'),
+      springAuth: springAuth,
+      loginPath: login.isNotEmpty
+          ? login
+          : (springAuth ? '/api/v1/auth/login' : '/api/auth/login'),
+      registerPath: register.isNotEmpty
+          ? register
+          : (springAuth ? '/api/v1/auth/register' : '/api/auth/register'),
+    );
+  }
 
   final String baseUrl;
   final String loginPath;
   final String registerPath;
+  final bool springAuth;
   final Duration timeout;
 
   bool get isConfigured => baseUrl.trim().isNotEmpty;

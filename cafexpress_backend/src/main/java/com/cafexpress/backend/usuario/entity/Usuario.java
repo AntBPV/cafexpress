@@ -27,6 +27,12 @@ public class Usuario {
     @Column(nullable = false, length = 20)
     private Rol rol;
 
+    @Column(name = "empresa_productor", length = 120)
+    private String empresaProductor;
+
+    @Column(name = "pais_origen", length = 80)
+    private String paisOrigen;
+
     @Column(nullable = false)
     private boolean activo = true;
 
@@ -70,6 +76,15 @@ public class Usuario {
 
     public boolean isActivo() {
         return activo;
+    }
+
+    public String getEmpresaProductor() { return empresaProductor; }
+    public String getPaisOrigen() { return paisOrigen; }
+
+    public void completarPerfil(String nombre, String empresaProductor, String paisOrigen) {
+        this.nombre = nombre.strip();
+        this.empresaProductor = empresaProductor.strip();
+        this.paisOrigen = paisOrigen.strip();
     }
 
     public Instant getCreadoEn() {

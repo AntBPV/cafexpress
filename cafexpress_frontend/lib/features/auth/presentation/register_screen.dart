@@ -2,14 +2,20 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/network/api_exception.dart';
+import '../../navigation/domain/user_role.dart';
 import '../data/auth_repository.dart';
 import 'widgets/auth_feedback.dart';
 import 'widgets/auth_scaffold.dart';
 
 class RegisterScreen extends StatefulWidget {
-  const RegisterScreen({super.key, required this.authRepository});
+  const RegisterScreen({
+    super.key,
+    required this.authRepository,
+    this.springAuth = false,
+  });
 
   final AuthRepository authRepository;
+  final bool springAuth;
 
   @override
   State<RegisterScreen> createState() => _RegisterScreenState();
@@ -31,6 +37,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscureConfirmation = true;
   bool _isSubmitting = false;
   bool _hasSubmitted = false;
+  UserRole? _role;
   String? _errorMessage;
 
   @override
@@ -77,8 +84,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
     return null;
   }
 
-  String? _validatePassword(String? value) =>
-      value == null || value.isEmpty ? 'Escribe una contraseña.' : null;
+  String? _validatePassword(String? value) {
+    if (value == null || value.isEmpty) return 'Escribe una contraseña.';
+    if (widget.springAuth &&
+        (value.length < 8 ||
+            value.length > 72 ||
+            !RegExp(r'\p{L}', unicode: true).hasMatch(value) ||
+            !RegExp(r'\p{N}', unicode: true).hasMatch(value))) {
+      return 'Usa de 8 a 72 caracteres, con letras y números.';
+    }
+    return null;
+  }
 
   String? _validateConfirmation(String? value) {
     if (value == null || value.isEmpty) return 'Confirma tu contraseña.';
@@ -108,7 +124,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
       );
       final fields = [
         (_name, _nameFocus, _validateName),
-        (_username, _usernameFocus, _validateUsername),
+        if (!widget.springAuth) (_username, _usernameFocus, _validateUsername),
         (_email, _emailFocus, _validateEmail),
         (_password, _passwordFocus, _validatePassword),
         (_confirmation, _confirmationFocus, _validateConfirmation),
@@ -132,6 +148,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         username: _username.text.trim(),
         email: _email.text.trim(),
         password: _password.text,
+        role: _role?.name.toUpperCase(),
       );
       if (!mounted || ModalRoute.of(context)?.isCurrent != true) return;
       TextInput.finishAutofillContext();
@@ -211,28 +228,32 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               validator: _validateName,
               onChanged: _clearError,
-              onFieldSubmitted: (_) => _usernameFocus.requestFocus(),
+              onFieldSubmitted: (_) =>
+                  (widget.springAuth ? _emailFocus : _usernameFocus)
+                      .requestFocus(),
             ),
-            const SizedBox(height: 24),
-            TextFormField(
-              key: const Key('register-username'),
-              controller: _username,
-              focusNode: _usernameFocus,
-              readOnly: _isSubmitting,
-              autocorrect: false,
-              enableSuggestions: false,
-              textCapitalization: TextCapitalization.none,
-              textInputAction: TextInputAction.next,
-              autofillHints: const [AutofillHints.newUsername],
-              decoration: const InputDecoration(
-                labelText: 'Usuario',
-                hintText: 'Elige tu nombre de usuario',
-                prefixIcon: Icon(Icons.person_outline_rounded),
+            if (!widget.springAuth) ...[
+              const SizedBox(height: 24),
+              TextFormField(
+                key: const Key('register-username'),
+                controller: _username,
+                focusNode: _usernameFocus,
+                readOnly: _isSubmitting,
+                autocorrect: false,
+                enableSuggestions: false,
+                textCapitalization: TextCapitalization.none,
+                textInputAction: TextInputAction.next,
+                autofillHints: const [AutofillHints.newUsername],
+                decoration: const InputDecoration(
+                  labelText: 'Usuario',
+                  hintText: 'Elige tu nombre de usuario',
+                  prefixIcon: Icon(Icons.person_outline_rounded),
+                ),
+                validator: _validateUsername,
+                onChanged: _clearError,
+                onFieldSubmitted: (_) => _emailFocus.requestFocus(),
               ),
-              validator: _validateUsername,
-              onChanged: _clearError,
-              onFieldSubmitted: (_) => _emailFocus.requestFocus(),
-            ),
+            ],
             const SizedBox(height: 24),
             TextFormField(
               key: const Key('register-email'),
@@ -258,6 +279,27 @@ class _RegisterScreenState extends State<RegisterScreen> {
             _buildPasswordField(confirmation: false),
             const SizedBox(height: 24),
             _buildPasswordField(confirmation: true),
+            if (widget.springAuth) ...[
+              const SizedBox(height: 24),
+              DropdownButtonFormField<UserRole>(
+                key: const Key('register-role'),
+                initialValue: _role,
+                isExpanded: true,
+                decoration: const InputDecoration(labelText: 'Tipo de cuenta'),
+                items: [
+                  for (final role in UserRole.values)
+                    DropdownMenuItem(value: role, child: Text(role.label)),
+                ],
+                onChanged: _isSubmitting
+                    ? null
+                    : (role) => setState(() {
+                        _role = role;
+                        _errorMessage = null;
+                      }),
+                validator: (role) =>
+                    role == null ? 'Selecciona un tipo de cuenta.' : null,
+              ),
+            ],
             if (_errorMessage case final message?) ...[
               const SizedBox(height: 24),
               AuthFeedback(key: const Key('register-error'), message: message),

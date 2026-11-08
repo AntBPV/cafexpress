@@ -18,6 +18,8 @@ public interface ProductoRepository extends JpaRepository<Producto, UUID> {
 
     Page<Producto> findAllByVendedorId(UUID vendedorId, Pageable pageable);
 
+    long countByVendedorIdAndDisponibleTrue(UUID vendedorId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("select p from Producto p where p.id = :id")
     Optional<Producto> findByIdForUpdate(@Param("id") UUID id);

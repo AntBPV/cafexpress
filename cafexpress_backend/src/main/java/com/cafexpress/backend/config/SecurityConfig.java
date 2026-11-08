@@ -102,14 +102,17 @@ public class SecurityConfig {
 
                         .requestMatchers(
                                 HttpMethod.GET,
-                                "/api/v1/auth/me"
+                                "/api/v1/auth/me",
+                                "/api/v1/perfil",
+                                "/api/v1/dashboard",
+                                "/api/v1/dashboard/alertas"
                         )
                         .authenticated()
 
                         .requestMatchers("/api/v1/alerta/**")
                         .authenticated()
 
-                        .requestMatchers("/api/v1/productos")
+                        .requestMatchers("/api/v1/productos", "/api/v1/productos/**")
                         .authenticated()
 
                         .requestMatchers("/api/v1/vendedor/**")

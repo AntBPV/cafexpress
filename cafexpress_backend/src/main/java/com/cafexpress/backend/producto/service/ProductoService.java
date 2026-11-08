@@ -36,6 +36,12 @@ public class ProductoService {
     public ProductoResponse crear(ProductoRequest request, UUID vendedorId) {
         Usuario vendedor = obtenerVendedor(vendedorId);
 
+        if (vendedor.getEmpresaProductor() == null || vendedor.getEmpresaProductor().isBlank()
+                || vendedor.getPaisOrigen() == null || vendedor.getPaisOrigen().isBlank()) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Completa tu empresa o productor y el país de origen antes de publicar.");
+        }
+
         Producto producto = productos.save(new Producto(
                 request.nombre().trim(),
                 request.cantidadUnitaria(),

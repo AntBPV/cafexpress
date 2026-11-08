@@ -27,6 +27,7 @@ class RegistrationRepository implements AuthRepository {
     required String username,
     required String email,
     required String password,
+    String? role,
   }) {
     registrationCalls++;
     return onRegister();

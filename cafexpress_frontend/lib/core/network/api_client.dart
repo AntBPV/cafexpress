@@ -23,23 +23,52 @@ class ApiClient {
     String invalidResponseMessage =
         'No pudimos completar la solicitud. Inténtalo de nuevo más tarde.',
     Map<int, String> errorMessages = const {},
+  }) => _request(
+    'POST',
+    path,
+    body: body,
+    authorization: authorization,
+    unavailableMessage: unavailableMessage,
+    invalidResponseMessage: invalidResponseMessage,
+    errorMessages: errorMessages,
+  );
+
+  Future<Map<String, dynamic>> getJson(
+    String path, {
+    required String authorization,
+  }) => _request('GET', path, authorization: authorization);
+
+  Future<Map<String, dynamic>> putJson(
+    String path, {
+    required Map<String, dynamic> body,
+    required String authorization,
+  }) => _request('PUT', path, body: body, authorization: authorization);
+
+  Future<Map<String, dynamic>> _request(
+    String method,
+    String path, {
+    Map<String, dynamic>? body,
+    String? authorization,
+    String unavailableMessage = 'El servicio no está disponible.',
+    String invalidResponseMessage = 'La respuesta del servidor no es válida.',
+    Map<int, String> errorMessages = const {},
   }) async {
     if (!config.isConfigured) {
       throw ApiException(unavailableMessage);
     }
 
     try {
-      final response = await _client
-          .post(
-            config.endpoint(path),
-            headers: {
-              'Content-Type': 'application/json; charset=UTF-8',
-              'Accept': 'application/json',
-              'Authorization': ?authorization,
-            },
-            body: jsonEncode(body),
-          )
-          .timeout(config.timeout);
+      final request = http.Request(method, config.endpoint(path))
+        ..headers.addAll({
+          'Content-Type': 'application/json; charset=UTF-8',
+          'Accept': 'application/json',
+          'Authorization': ?authorization,
+        });
+      if (body != null) request.body = jsonEncode(body);
+      final response = await (() async {
+        final streamed = await _client.send(request);
+        return http.Response.fromStream(streamed);
+      })().timeout(config.timeout);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
         throw ApiException(

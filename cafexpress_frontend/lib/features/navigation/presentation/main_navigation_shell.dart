@@ -32,13 +32,17 @@ class MainNavigationShell extends StatefulWidget {
     this.userName,
     this.initialRole = UserRole.comprador,
     this.initialIndex = 0,
+    this.allowRolePreview = true,
     this.onSignOut,
     this.sectionBuilder,
+    this.onDestinationChanged,
   });
 
   final String? userName;
   final UserRole initialRole;
   final int initialIndex;
+  final bool allowRolePreview;
+  final ValueChanged<int>? onDestinationChanged;
   final VoidCallback? onSignOut;
 
   /// Permite que los demás módulos inyecten su pantalla según el rol e índice activo.
@@ -47,7 +51,8 @@ class MainNavigationShell extends StatefulWidget {
     UserRole role,
     int index,
     NavigationDestinationSpec destination,
-  )? sectionBuilder;
+  )?
+  sectionBuilder;
 
   @override
   State<MainNavigationShell> createState() => _MainNavigationShellState();
@@ -71,8 +76,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-inicio',
           label: 'Inicio',
           title: 'Resumen del Vendedor',
-          description:
-              'Espacio de navegación reservado para el Dashboard del vendedor (productos publicados, órdenes activas y alertas recientes).',
+          description: 'Espacio de navegación reservado para el Dashboard del vendedor (productos publicados, órdenes activas y alertas recientes).',
           icon: Icons.dashboard_outlined,
           selectedIcon: Icons.dashboard_rounded,
         ),
@@ -80,8 +84,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-productos',
           label: 'Mis Lotes',
           title: 'Publicación y Gestión de Productos',
-          description:
-              'Espacio de navegación reservado para publicar lotes de café/cacao y editar precios manualmente.',
+          description: 'Espacio de navegación reservado para publicar lotes de café/cacao y editar precios manualmente.',
           icon: Icons.inventory_2_outlined,
           selectedIcon: Icons.inventory_2_rounded,
         ),
@@ -89,8 +92,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-ordenes',
           label: 'Órdenes',
           title: 'Órdenes Recibidas',
-          description:
-              'Espacio de navegación reservado para listar las órdenes recibidas y avanzar su estado en el historial.',
+          description: 'Espacio de navegación reservado para listar las órdenes recibidas y avanzar su estado en el historial.',
           icon: Icons.receipt_long_outlined,
           selectedIcon: Icons.receipt_long_rounded,
         ),
@@ -98,8 +100,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-clima',
           label: 'Clima',
           title: 'Clima y Alertas de Región',
-          description:
-              'Espacio de navegación reservado para consultar alertas climáticas por umbral en la región productora.',
+          description: 'Espacio de navegación reservado para consultar alertas climáticas por umbral en la región productora.',
           icon: Icons.thunderstorm_outlined,
           selectedIcon: Icons.thunderstorm_rounded,
         ),
@@ -107,8 +108,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-perfil',
           label: 'Perfil',
           title: 'Perfil del Vendedor',
-          description:
-              'Espacio de navegación reservado para el módulo de perfiles y certificado de calidad.',
+          description: 'Espacio de navegación reservado para el módulo de perfiles y certificado de calidad.',
           icon: Icons.person_outline_rounded,
           selectedIcon: Icons.person_rounded,
         ),
@@ -120,8 +120,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-inicio',
         label: 'Inicio',
         title: 'Resumen del Comprador',
-        description:
-            'Espacio de navegación reservado para el Dashboard del comprador (órdenes activas y alertas relevantes).',
+        description: 'Espacio de navegación reservado para el Dashboard del comprador (órdenes activas y alertas relevantes).',
         icon: Icons.dashboard_outlined,
         selectedIcon: Icons.dashboard_rounded,
       ),
@@ -129,8 +128,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-catalogo',
         label: 'Catálogo',
         title: 'Catálogo de Café y Cacao',
-        description:
-            'Espacio de navegación reservado para explorar el catálogo de productos, filtros y detalle del lote.',
+        description: 'Espacio de navegación reservado para explorar el catálogo de productos, filtros y detalle del lote.',
         icon: Icons.storefront_outlined,
         selectedIcon: Icons.storefront_rounded,
       ),
@@ -138,8 +136,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-ordenes',
         label: 'Órdenes',
         title: 'Mis Órdenes y Seguimiento',
-        description:
-            'Espacio de navegación reservado para la generación y trazabilidad de órdenes de compra.',
+        description: 'Espacio de navegación reservado para la generación y trazabilidad de órdenes de compra.',
         icon: Icons.local_shipping_outlined,
         selectedIcon: Icons.local_shipping_rounded,
       ),
@@ -147,8 +144,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-clima',
         label: 'Clima',
         title: 'Alertas Climáticas de Compra',
-        description:
-            'Espacio de navegación reservado para alertas de buen momento de compra según el clima de origen.',
+        description: 'Espacio de navegación reservado para alertas de buen momento de compra según el clima de origen.',
         icon: Icons.wb_sunny_outlined,
         selectedIcon: Icons.wb_sunny_rounded,
       ),
@@ -156,8 +152,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-perfil',
         label: 'Perfil',
         title: 'Mi Perfil Individual',
-        description:
-            'Espacio de navegación reservado para la interfaz frontend de visualización de perfil individual.',
+        description: 'Espacio de navegación reservado para la interfaz frontend de visualización de perfil individual.',
         icon: Icons.person_outline_rounded,
         selectedIcon: Icons.person_rounded,
       ),
@@ -177,6 +172,15 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
 
   void _selectTab(int index) {
     setState(() => _selectedIndex = index);
+    widget.onDestinationChanged?.call(index);
+  }
+
+  @override
+  void didUpdateWidget(covariant MainNavigationShell oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.initialIndex != widget.initialIndex) {
+      _selectedIndex = widget.initialIndex.clamp(0, 4);
+    }
   }
 
   @override
@@ -202,7 +206,7 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               selectedIndex: _selectedIndex,
               destinations: destinations,
               onSelectTab: _selectTab,
-              onRoleChanged: _updateRole,
+              onRoleChanged: widget.allowRolePreview ? _updateRole : null,
               onSignOut: widget.onSignOut,
             );
 
@@ -234,16 +238,19 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
               ],
             ),
             actions: [
-              TextButton.icon(
-                key: const Key('nav-role-switch'),
-                style: TextButton.styleFrom(
-                  minimumSize: const Size(48, 48),
-                  padding: const EdgeInsets.symmetric(horizontal: 12),
-                ),
-                onPressed: _toggleRole,
-                icon: Icon(_role.icon, size: 18),
-                label: Text('Rol: ${_role.label}'),
-              ),
+              if (widget.allowRolePreview)
+                TextButton.icon(
+                  key: const Key('nav-role-switch'),
+                  style: TextButton.styleFrom(
+                    minimumSize: const Size(48, 48),
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                  ),
+                  onPressed: _toggleRole,
+                  icon: Icon(_role.icon, size: 18),
+                  label: Text('Rol: ${_role.label}'),
+                )
+              else
+                Center(child: Text(_role.label)),
               if (widget.onSignOut != null)
                 IconButton(
                   key: const Key('nav-logout'),
@@ -322,7 +329,7 @@ class _NavigationSectionContainer extends StatelessWidget {
   final int selectedIndex;
   final List<NavigationDestinationSpec> destinations;
   final ValueChanged<int> onSelectTab;
-  final ValueChanged<UserRole> onRoleChanged;
+  final ValueChanged<UserRole>? onRoleChanged;
   final VoidCallback? onSignOut;
 
   @override
@@ -428,49 +435,52 @@ class _NavigationSectionContainer extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: 16),
-                    Text(
-                      active.description,
-                      style: theme.textTheme.bodyLarge,
-                    ),
-                    const SizedBox(height: 20),
-                    Divider(color: colors.outlineVariant),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Cambiar rol de navegación:',
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        fontWeight: FontWeight.w600,
+                    Text(active.description, style: theme.textTheme.bodyLarge),
+                    if (onRoleChanged case final changeRole?) ...[
+                      const SizedBox(height: 20),
+                      Divider(color: colors.outlineVariant),
+                      const SizedBox(height: 16),
+                      Text(
+                        'Cambiar rol de navegación:',
+                        style: theme.textTheme.labelLarge?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    Wrap(
-                      spacing: 12,
-                      runSpacing: 12,
-                      children: [
-                        for (final itemRole in UserRole.values)
-                          itemRole == role
-                              ? FilledButton.icon(
-                                  key: Key('nav-role-option-${itemRole.name}'),
-                                  style: FilledButton.styleFrom(
-                                    minimumSize: const Size(150, 48),
-                                  ),
-                                  onPressed: () => onRoleChanged(itemRole),
-                                  icon: Icon(itemRole.icon),
-                                  label: Text(itemRole.label),
-                                )
-                              : OutlinedButton.icon(
-                                  key: Key('nav-role-option-${itemRole.name}'),
-                                  style: OutlinedButton.styleFrom(
-                                    minimumSize: const Size(150, 48),
-                                    shape: RoundedRectangleBorder(
-                                      borderRadius: BorderRadius.circular(12),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 12,
+                        children: [
+                          for (final itemRole in UserRole.values)
+                            itemRole == role
+                                ? FilledButton.icon(
+                                    key: Key(
+                                      'nav-role-option-${itemRole.name}',
                                     ),
+                                    style: FilledButton.styleFrom(
+                                      minimumSize: const Size(150, 48),
+                                    ),
+                                    onPressed: () => changeRole(itemRole),
+                                    icon: Icon(itemRole.icon),
+                                    label: Text(itemRole.label),
+                                  )
+                                : OutlinedButton.icon(
+                                    key: Key(
+                                      'nav-role-option-${itemRole.name}',
+                                    ),
+                                    style: OutlinedButton.styleFrom(
+                                      minimumSize: const Size(150, 48),
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                    ),
+                                    onPressed: () => changeRole(itemRole),
+                                    icon: Icon(itemRole.icon),
+                                    label: Text(itemRole.label),
                                   ),
-                                  onPressed: () => onRoleChanged(itemRole),
-                                  icon: Icon(itemRole.icon),
-                                  label: Text(itemRole.label),
-                                ),
-                      ],
-                    ),
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),

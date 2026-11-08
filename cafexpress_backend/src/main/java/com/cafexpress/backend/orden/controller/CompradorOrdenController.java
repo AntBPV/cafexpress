@@ -49,6 +49,19 @@ public class CompradorOrdenController {
         return ordenService.listarDelComprador(idDesde(jwt), pageable);
     }
 
+    @GetMapping("/historial")
+    public Page<OrdenResponse> historial(
+            @AuthenticationPrincipal Jwt jwt,
+            @PageableDefault(
+                    size = 20,
+                    sort = "creadoEn",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
+    ) {
+        return ordenService.historialDelComprador(idDesde(jwt), pageable);
+    }
+
     private UUID idDesde(Jwt jwt) {
         return UUID.fromString(jwt.getSubject());
     }

@@ -15,6 +15,14 @@ public interface OrdenRepository extends JpaRepository<Orden, UUID> {
 
     Page<Orden> findAllByVendedorId(UUID vendedorId, Pageable pageable);
 
+    Page<Orden> findAllByCompradorIdAndActivoTrue(UUID compradorId, Pageable pageable);
+
+    Page<Orden> findAllByVendedorIdAndActivoTrue(UUID vendedorId, Pageable pageable);
+
+    Page<Orden> findAllByCompradorIdAndActivoFalse(UUID compradorId, Pageable pageable);
+
+    Page<Orden> findAllByVendedorIdAndActivoFalse(UUID vendedorId, Pageable pageable);
+
     Optional<Orden> findByIdAndVendedorId(UUID id, UUID vendedorId);
 
     boolean existsByProductoIdAndCompradorIdAndEstado(

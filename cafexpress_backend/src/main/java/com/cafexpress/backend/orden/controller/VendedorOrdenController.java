@@ -37,6 +37,19 @@ public class VendedorOrdenController {
         return ordenService.listarDelVendedor(idDesde(jwt), pageable);
     }
 
+    @GetMapping("/historial")
+    public Page<OrdenResponse> historial(
+            @AuthenticationPrincipal Jwt jwt,
+            @PageableDefault(
+                    size = 20,
+                    sort = "creadoEn",
+                    direction = Sort.Direction.DESC
+            )
+            Pageable pageable
+    ) {
+        return ordenService.historialDelVendedor(idDesde(jwt), pageable);
+    }
+
     @PatchMapping("/{ordenId}/aceptar")
     public OrdenResponse aceptar(
             @PathVariable UUID ordenId,
@@ -51,6 +64,30 @@ public class VendedorOrdenController {
             @AuthenticationPrincipal Jwt jwt
     ) {
         return ordenService.rechazar(ordenId, idDesde(jwt));
+    }
+
+    @PatchMapping("/{ordenId}/preparar")
+    public OrdenResponse ponerEnPreparacion(
+            @PathVariable UUID ordenId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ordenService.ponerEnPreparacion(ordenId, idDesde(jwt));
+    }
+
+    @PatchMapping("/{ordenId}/enviar")
+    public OrdenResponse enviar(
+            @PathVariable UUID ordenId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ordenService.enviar(ordenId, idDesde(jwt));
+    }
+
+    @PatchMapping("/{ordenId}/entregar")
+    public OrdenResponse entregar(
+            @PathVariable UUID ordenId,
+            @AuthenticationPrincipal Jwt jwt
+    ) {
+        return ordenService.entregar(ordenId, idDesde(jwt));
     }
 
     private UUID idDesde(Jwt jwt) {

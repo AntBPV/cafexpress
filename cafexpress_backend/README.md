@@ -101,14 +101,32 @@ pueden consultar y resolver las solicitudes de sus propios productos:
 |---|---|---|
 | POST | `/api/v1/comprador/ordenes` | COMPRADOR |
 | GET | `/api/v1/comprador/ordenes` | COMPRADOR |
+| GET | `/api/v1/comprador/ordenes/historial` | COMPRADOR |
 | GET | `/api/v1/vendedor/ordenes` | VENDEDOR |
+| GET | `/api/v1/vendedor/ordenes/historial` | VENDEDOR |
 | PATCH | `/api/v1/vendedor/ordenes/{id}/aceptar` | VENDEDOR |
 | PATCH | `/api/v1/vendedor/ordenes/{id}/rechazar` | VENDEDOR |
+| PATCH | `/api/v1/vendedor/ordenes/{id}/preparar` | VENDEDOR |
+| PATCH | `/api/v1/vendedor/ordenes/{id}/enviar` | VENDEDOR |
+| PATCH | `/api/v1/vendedor/ordenes/{id}/entregar` | VENDEDOR |
 
 Para solicitar una orden se envían `productoId` y `cantidad`. La orden se
 crea con estado `SOLICITADA`. Al aceptarla, el backend bloquea el producto,
 comprueba nuevamente la disponibilidad y descuenta la cantidad solicitada.
-Los estados posibles son `SOLICITADA`, `ACEPTADA` y `RECHAZADA`.
+La orden guarda el precio unitario y el precio total acordados al momento de
+crear la solicitud, por lo que las modificaciones posteriores del precio del
+producto no cambian una orden existente. El recorrido debe ejecutarse en este
+orden, siempre por el vendedor propietario: `SOLICITADA` →
+`ACEPTADA` → `EN_PREPARACION` → `ENVIADA` → `ENTREGADA`. Una solicitud también
+puede pasar de `SOLICITADA` a `RECHAZADA`; ningún estado permite retrocesos ni
+saltos. Cada transición conserva su fecha de ejecución en la respuesta.
+
+`GET /api/v1/comprador/ordenes` y `GET /api/v1/vendedor/ordenes` muestran las
+órdenes activas. Las órdenes `SOLICITADA` y `RECHAZADA` no están activas;
+`ACEPTADA`, `EN_PREPARACION` y `ENVIADA` permanecen activas, y `ENTREGADA`
+pasa a ser inactiva.
+El historial se consulta mediante las rutas `/historial` correspondientes y
+solo incluye las órdenes del participante autenticado.
 
 ## Datos almacenados
 

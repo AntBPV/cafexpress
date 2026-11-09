@@ -82,13 +82,20 @@ class _RemoteViewState<T> extends State<RemoteView<T>> {
 }
 
 class PageBody extends StatelessWidget {
-  const PageBody({super.key, required this.children, this.onRefresh});
+  const PageBody({
+    super.key,
+    required this.children,
+    this.onRefresh,
+    this.controller,
+  });
   final List<Widget> children;
   final Future<void> Function()? onRefresh;
+  final ScrollController? controller;
   @override
   Widget build(BuildContext context) {
     final content = LayoutBuilder(
       builder: (context, bounds) => SingleChildScrollView(
+        controller: controller,
         physics: const AlwaysScrollableScrollPhysics(),
         padding: EdgeInsets.symmetric(
           horizontal: bounds.maxWidth > 700 ? 40 : 20,
@@ -105,9 +112,12 @@ class PageBody extends StatelessWidget {
         ),
       ),
     );
-    return onRefresh == null
-        ? content
-        : RefreshIndicator(onRefresh: onRefresh!, child: content);
+    return Material(
+      type: MaterialType.transparency,
+      child: onRefresh == null
+          ? content
+          : RefreshIndicator(onRefresh: onRefresh!, child: content),
+    );
   }
 }
 

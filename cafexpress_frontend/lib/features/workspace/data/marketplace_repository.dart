@@ -76,7 +76,7 @@ class MarketplaceRepository {
     String? country,
     num? minimumPrice,
     num? maximumPrice,
-    String? sort, // <--- PARÁMETRO AGREGADO
+    String? sort,
   }) {
     final query = Uri(
       queryParameters: <String, String>{
@@ -87,7 +87,7 @@ class MarketplaceRepository {
         if (country?.trim().isNotEmpty == true) 'paisOrigen': country!.trim(),
         if (minimumPrice != null) 'precioMin': '$minimumPrice',
         if (maximumPrice != null) 'precioMax': '$maximumPrice',
-        if (sort != null) 'sort': sort, // <--- AGREGADO A LA URL
+        if (sort?.trim().isNotEmpty == true) 'sort': sort!.trim(),
       },
     ).query;
     return _read(
@@ -123,7 +123,8 @@ class MarketplaceRepository {
       '/api/v1/vendedor/productos/${Uri.encodeComponent(id)}',
       authorization: _authorization,
       errorMessages: const {
-        409: 'Este producto tiene órdenes. Desactívalo desde Editar producto para conservar el historial.',
+        409:
+            'Este producto tiene órdenes. Desactívalo desde Editar producto para conservar el historial.',
       },
     );
   }
@@ -143,10 +144,23 @@ class MarketplaceRepository {
     return item;
   }
 
-  Future<OrderPage> orderPage({int page = 0, bool history = false}) => _read(
-    '${isSeller ? "vendedor" : "comprador"}/ordenes${history ? "/historial" : ""}?page=$page&size=20',
-    OrderPage.fromJson,
-  );
+  Future<OrderPage> orderPage({
+    int page = 0,
+    bool history = false,
+    String? sort,
+  }) {
+    final query = Uri(
+      queryParameters: <String, String>{
+        'page': '$page',
+        'size': '20',
+        if (sort?.trim().isNotEmpty == true) 'sort': sort!.trim(),
+      },
+    ).query;
+    return _read(
+      '${isSeller ? "vendedor" : "comprador"}/ordenes${history ? "/historial" : ""}?$query',
+      OrderPage.fromJson,
+    );
+  }
 
   Future<List<OrderSummary>> orders({int page = 0}) async =>
       (await orderPage(page: page)).items;
@@ -168,7 +182,8 @@ class MarketplaceRepository {
       '/api/v1/vendedor/ordenes/${Uri.encodeComponent(id)}/$action',
       authorization: _authorization,
       errorMessages: const {
-        409: 'La orden cambió de estado o ya no hay disponibilidad. Actualiza los datos antes de continuar.',
+        409:
+            'La orden cambió de estado o ya no hay disponibilidad. Actualiza los datos antes de continuar.',
       },
     );
     try {
@@ -201,4 +216,4 @@ class MarketplaceRepository {
       );
     }
   }
-} 
+}

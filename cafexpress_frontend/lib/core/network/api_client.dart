@@ -93,10 +93,12 @@ class ApiClient {
       })().timeout(config.timeout);
 
       if (response.statusCode < 200 || response.statusCode >= 300) {
+        final parsedFieldErrors = _extractFieldErrors(response.bodyBytes);
         throw ApiException(
           errorMessages[response.statusCode] ??
               _messageForStatus(response.statusCode, unavailableMessage),
           statusCode: response.statusCode,
+          fieldErrors: parsedFieldErrors,
         );
       }
       final decoded = jsonDecode(utf8.decode(response.bodyBytes));
@@ -114,6 +116,30 @@ class ApiClient {
       );
     } on FormatException {
       throw ApiException(invalidResponseMessage);
+    }
+  }
+
+  Map<String, String> _extractFieldErrors(List<int> bodyBytes) {
+    if (bodyBytes.isEmpty) return const {};
+    try {
+      final decoded = jsonDecode(utf8.decode(bodyBytes));
+      if (decoded is! Map<String, dynamic>) return const {};
+      final rawErrors = decoded['errores'] ?? decoded['errors'];
+      if (rawErrors is! Map) return const {};
+      final result = <String, String>{};
+      for (final entry in rawErrors.entries) {
+        final key = entry.key?.toString().trim();
+        final value = entry.value?.toString().trim();
+        if (key != null &&
+            key.isNotEmpty &&
+            value != null &&
+            value.isNotEmpty) {
+          result[key] = value;
+        }
+      }
+      return result;
+    } catch (_) {
+      return const {};
     }
   }
 

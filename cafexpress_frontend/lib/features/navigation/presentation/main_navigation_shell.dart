@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
-import 'package:cafexpress_frontend/features/orders/screens/order_generation_screen.dart';
 import '../domain/user_role.dart';
 
 /// Especificación de cada destino dentro de la interfaz inicial de navegación (F2-34).
@@ -73,7 +72,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-inicio',
           label: 'Inicio',
           title: 'Resumen del Vendedor',
-          description: 'Espacio de navegación reservado para el Dashboard del vendedor (productos publicados, órdenes activas y alertas recientes).',
+          description:
+              'Espacio de navegación reservado para el Dashboard del vendedor (productos publicados, órdenes activas y alertas recientes).',
           icon: Icons.dashboard_outlined,
           selectedIcon: Icons.dashboard_rounded,
         ),
@@ -81,7 +81,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-productos',
           label: 'Mis Lotes',
           title: 'Publicación y Gestión de Productos',
-          description: 'Espacio de navegación reservado para publicar lotes de café/cacao y editar precios manualmente.',
+          description:
+              'Espacio de navegación reservado para publicar lotes de café/cacao y editar precios manualmente.',
           icon: Icons.inventory_2_outlined,
           selectedIcon: Icons.inventory_2_rounded,
         ),
@@ -89,7 +90,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-ordenes',
           label: 'Órdenes',
           title: 'Órdenes Recibidas',
-          description: 'Espacio de navegación reservado para listar las órdenes recibidas y avanzar su estado en el historial.',
+          description:
+              'Espacio de navegación reservado para listar las órdenes recibidas y avanzar su estado en el historial.',
           icon: Icons.receipt_long_outlined,
           selectedIcon: Icons.receipt_long_rounded,
         ),
@@ -97,7 +99,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-clima',
           label: 'Clima',
           title: 'Clima y Alertas de Región',
-          description: 'Espacio de navegación reservado para consultar alertas climáticas por umbral en la región productora.',
+          description:
+              'Espacio de navegación reservado para consultar alertas climáticas por umbral en la región productora.',
           icon: Icons.thunderstorm_outlined,
           selectedIcon: Icons.thunderstorm_rounded,
         ),
@@ -105,7 +108,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
           keyName: 'nav-tab-perfil',
           label: 'Perfil',
           title: 'Perfil del Vendedor',
-          description: 'Espacio de navegación reservado para el módulo de perfiles de vendedor.',
+          description:
+              'Espacio de navegación reservado para el módulo de perfiles de vendedor.',
           icon: Icons.person_outline_rounded,
           selectedIcon: Icons.person_rounded,
         ),
@@ -117,7 +121,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-inicio',
         label: 'Inicio',
         title: 'Resumen del Comprador',
-        description: 'Espacio de navegación reservado para el Dashboard del comprador (órdenes activas y alertas relevantes).',
+        description:
+            'Espacio de navegación reservado para el Dashboard del comprador (órdenes activas y alertas relevantes).',
         icon: Icons.dashboard_outlined,
         selectedIcon: Icons.dashboard_rounded,
       ),
@@ -125,7 +130,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-catalogo',
         label: 'Catálogo',
         title: 'Catálogo de Café y Cacao',
-        description: 'Espacio de navegación reservado para explorar el catálogo de productos, filtros y detalle del lote.',
+        description:
+            'Espacio de navegación reservado para explorar el catálogo de productos, filtros y detalle del lote.',
         icon: Icons.storefront_outlined,
         selectedIcon: Icons.storefront_rounded,
       ),
@@ -133,7 +139,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-ordenes',
         label: 'Órdenes',
         title: 'Mis Órdenes y Seguimiento',
-        description: 'Espacio de navegación reservado para la generación y trazabilidad de órdenes de compra.',
+        description:
+            'Espacio de navegación reservado para la generación y trazabilidad de órdenes de compra.',
         icon: Icons.local_shipping_outlined,
         selectedIcon: Icons.local_shipping_rounded,
       ),
@@ -141,7 +148,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-clima',
         label: 'Clima',
         title: 'Alertas Climáticas de Compra',
-        description: 'Espacio de navegación reservado para alertas de buen momento de compra según el clima de origen.',
+        description:
+            'Espacio de navegación reservado para alertas de buen momento de compra según el clima de origen.',
         icon: Icons.wb_sunny_outlined,
         selectedIcon: Icons.wb_sunny_rounded,
       ),
@@ -149,7 +157,8 @@ class _MainNavigationShellState extends State<MainNavigationShell> {
         keyName: 'nav-tab-perfil',
         label: 'Perfil',
         title: 'Mi Perfil Individual',
-        description: 'Espacio de navegación reservado para la interfaz frontend de visualización de perfil individual.',
+        description:
+            'Espacio de navegación reservado para la interfaz frontend de visualización de perfil individual.',
         icon: Icons.person_outline_rounded,
         selectedIcon: Icons.person_rounded,
       ),
@@ -433,24 +442,6 @@ class _NavigationSectionContainer extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(active.description, style: theme.textTheme.bodyLarge),
-                  
-                    // BOTÓN DE PRUEBA (Temporal, solo Comprador en Inicio)
-                    if (selectedIndex == 0 && role == UserRole.comprador) ...[
-                      const SizedBox(height: 16),
-                      ElevatedButton.icon(
-                        icon: const Icon(Icons.shopping_cart),
-                        label: const Text('Probar Generación de Orden'),
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => const OrderGenerationScreen(),
-                            ),
-                          );
-                        },
-                      ),
-                    ],
-
                     if (onRoleChanged case final changeRole?) ...[
                       const SizedBox(height: 20),
                       Divider(color: colors.outlineVariant),

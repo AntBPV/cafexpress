@@ -20,6 +20,23 @@ class ProductFormPage extends StatefulWidget {
 }
 
 class _ProductFormPageState extends State<ProductFormPage> {
+  static const _backendKeyToField = <String, String>{
+    'nombre': 'name',
+    'name': 'name',
+    'variedad': 'variety',
+    'variety': 'variety',
+    'lugarOrigen': 'origin',
+    'origin': 'origin',
+    'cantidadUnitaria': 'unit-amount',
+    'unitAmount': 'unit-amount',
+    'unit-amount': 'unit-amount',
+    'cantidadDisponible': 'stock',
+    'availableAmount': 'stock',
+    'stock': 'stock',
+    'precioUnitario': 'price',
+    'price': 'price',
+  };
+
   final _form = GlobalKey<FormState>();
   late final _name = TextEditingController(text: widget.product?.name);
   late final _variety = TextEditingController(text: widget.product?.variety);
@@ -36,11 +53,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late String _type = widget.product?.type ?? 'CAFE',
       _unit = widget.product?.unit ?? 'KILOGRAMOS';
   late bool _available = widget.product?.available ?? true;
-  
+
   bool _sending = false, _submitted = false;
-  bool _isDirty = false; // <--- NUEVO: Para advertir cambios sin guardar
+  bool _isDirty = false;
   String? _error;
-  Map<String, String> _fieldErrors = {}; // <--- NUEVO: Errores específicos por campo
+  final Map<String, String> _fieldErrors = {};
 
   @override
   void dispose() {
@@ -69,7 +86,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   num _number(TextEditingController controller) =>
       num.parse(controller.text.trim().replaceAll(',', '.'));
-      
+
   String? _numeric(
     String? value,
     int integers,
@@ -88,19 +105,28 @@ class _ProductFormPageState extends State<ProductFormPage> {
     return null;
   }
 
+  Map<String, String> _mapBackendErrors(Map<String, String> raw) {
+    final mapped = <String, String>{};
+    for (final entry in raw.entries) {
+      final targetKey = _backendKeyToField[entry.key] ?? entry.key;
+      mapped[targetKey] = entry.value;
+    }
+    return mapped;
+  }
+
   Future<void> _save() async {
     if (_sending) return;
     setState(() {
       _submitted = true;
       _error = null;
-      _fieldErrors.clear(); // Limpiamos errores previos del backend
+      _fieldErrors.clear();
     });
-    
+
     if (!_form.currentState!.validate()) return;
-    
+
     FocusScope.of(context).unfocus();
     setState(() => _sending = true);
-    
+
     try {
       final product = await widget.repository.saveProduct({
         'nombre': _name.text.trim(),
@@ -113,11 +139,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
         'precioUnitario': _number(_price),
         'disponible': _available,
       }, id: widget.product?.id);
-      
+
       if (!mounted) return;
       setState(() {
         _sending = false;
-        _isDirty = false; // Ya guardamos, no hay cambios pendientes
+        _isDirty = false;
       });
       Navigator.pop(context, product);
     } catch (failure) {
@@ -126,23 +152,15 @@ class _ProductFormPageState extends State<ProductFormPage> {
         widget.onSessionExpired();
         return;
       }
-      
+
       setState(() {
         _sending = false;
-        
-        // AQUI ATRAPAMOS LOS ERRORES DEL BACKEND POR CAMPO
         if (failure is ApiException) {
-          // NOTA: Si tu clase ApiException tiene un mapa de errores (ej. failure.errors), 
-          // lo asignamos aquí:
-          // _fieldErrors = failure.errors; 
-          
-          // Si el backend solo devuelve un mensaje general, se muestra abajo.
+          _fieldErrors.addAll(_mapBackendErrors(failure.fieldErrors));
           _error = failure.message;
         } else {
           _error = 'No pudimos guardar el producto. Reintenta.';
         }
-        
-        // Forzamos la validación para que los errores salgan en rojo
         _form.currentState?.validate();
       });
     }
@@ -162,12 +180,10 @@ class _ProductFormPageState extends State<ProductFormPage> {
       readOnly: _sending,
       decoration: InputDecoration(
         labelText: label,
-        errorText: _fieldErrors[key], // <--- Muestra el error del backend aquí
+        errorText: _fieldErrors[key],
       ),
       validator: (value) {
-        // Primero validamos el error del backend si existe
         if (_fieldErrors.containsKey(key)) return _fieldErrors[key];
-        // Si no, validamos lo local
         return validator(value);
       },
       textInputAction: TextInputAction.next,
@@ -176,11 +192,11 @@ class _ProductFormPageState extends State<ProductFormPage> {
           : TextInputType.text,
       onChanged: (_) {
         setState(() {
-          _isDirty = true; // <--- Marca el formulario como modificado
+          _isDirty = true;
           if (_error != null) _error = null;
           if (_fieldErrors.containsKey(key)) {
             _fieldErrors.remove(key);
-            _form.currentState?.validate(); // Oculta el error al empezar a escribir
+            _form.currentState?.validate();
           }
         });
       },
@@ -189,17 +205,18 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !_sending && !_isDirty, // <--- Solo deja salir si no hay cambios
+    canPop: !_sending && !_isDirty,
     onPopInvokedWithResult: (didPop, result) async {
       if (didPop) return;
-      if (_sending) return; // No puedes salir mientras guarda
-      
-      // Diálogo de advertencia
+      if (_sending) return;
+
       final shouldPop = await showDialog<bool>(
         context: context,
         builder: (context) => AlertDialog(
           title: const Text('¿Descartar cambios?'),
-          content: const Text('Si sales ahora, perderás los cambios no guardados de este producto.'),
+          content: const Text(
+            'Si sales ahora, perderás los cambios no guardados de este producto.',
+          ),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context, false),
@@ -212,8 +229,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
           ],
         ),
       );
-      if (shouldPop == true && mounted) {
-        Navigator.pop(context); // Cierra el formulario
+      if (shouldPop == true && context.mounted) {
+        Navigator.pop(context);
       }
     },
     child: Scaffold(
@@ -229,7 +246,8 @@ class _ProductFormPageState extends State<ProductFormPage> {
               title: widget.product == null
                   ? 'Publica tu producto'
                   : 'Actualiza tu producto',
-              description: 'El precio se aplica a cada presentación. Los cambios se guardan para los compradores.',
+              description:
+                  'El precio se aplica a cada presentación. Los cambios se guardan para los compradores.',
             ),
             Form(
               key: _form,
@@ -260,12 +278,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
                         child: Text('Variedad'),
                       ),
                     ],
-                    onChanged: _sending ? null : (v) {
-                      setState(() {
-                        _type = v!;
-                        _isDirty = true; // Marca como modificado
-                      });
-                    },
+                    onChanged: _sending
+                        ? null
+                        : (v) {
+                            setState(() {
+                              _type = v!;
+                              _isDirty = true;
+                            });
+                          },
                   ),
                   const SizedBox(height: 20),
                   _field(
@@ -301,12 +321,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       ),
                       DropdownMenuItem(value: 'GRAMOS', child: Text('Gramos')),
                     ],
-                    onChanged: _sending ? null : (v) {
-                      setState(() {
-                        _unit = v!;
-                        _isDirty = true; // Marca como modificado
-                      });
-                    },
+                    onChanged: _sending
+                        ? null
+                        : (v) {
+                            setState(() {
+                              _unit = v!;
+                              _isDirty = true;
+                            });
+                          },
                   ),
                   const SizedBox(height: 20),
                   _field(
@@ -332,7 +354,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
                         : (v) {
                             setState(() {
                               _available = v;
-                              _isDirty = true; // Marca como modificado
+                              _isDirty = true;
                             });
                           },
                   ),
@@ -361,4 +383,4 @@ class _ProductFormPageState extends State<ProductFormPage> {
       ),
     ),
   );
-} 
+}

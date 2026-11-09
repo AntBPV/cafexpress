@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../data/marketplace_repository.dart';
 import '../domain/marketplace_models.dart';
-import 'package:cafexpress_frontend/features/orders/screens/order_generation_screen.dart';
+import 'climate_panel.dart';
 import 'order_pages.dart';
 import 'workspace_widgets.dart';
-import 'climate_panel.dart';
 
 class DashboardPage extends StatelessWidget {
   const DashboardPage({
@@ -17,7 +16,7 @@ class DashboardPage extends StatelessWidget {
   final MarketplaceRepository repository;
   final ValueChanged<int> onSelect;
   final VoidCallback onSessionExpired;
-  
+
   @override
   Widget build(BuildContext context) => RemoteView<DashboardData>(
     load: repository.dashboard,
@@ -154,26 +153,9 @@ class DashboardPage extends StatelessWidget {
               if (context.mounted) await reload();
             },
           ),
-
-        Padding(
-          padding: const EdgeInsets.only(top: 24.0, bottom: 16.0),
-          child: ElevatedButton.icon(
-            icon: const Icon(Icons.shopping_cart),
-            label: const Text('Probar Generación de Orden'),
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const OrderGenerationScreen(),
-                ),
-              );
-            },
-          ),
-        ),
-        
         const SectionTitle('Clima y tendencia de precios'),
         ClimatePanel(onSessionExpired: onSessionExpired),
       ],
     ),
   );
-} 
+}

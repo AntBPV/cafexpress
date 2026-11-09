@@ -1,9 +1,14 @@
 /// Mensaje seguro para la interfaz; nunca incluye credenciales ni tokens.
 class ApiException implements Exception {
-  const ApiException(this.message, {this.statusCode});
+  const ApiException(
+    this.message, {
+    this.statusCode,
+    this.fieldErrors = const {},
+  });
 
   final String message;
   final int? statusCode;
+  final Map<String, String> fieldErrors;
 
   @override
   String toString() => message;

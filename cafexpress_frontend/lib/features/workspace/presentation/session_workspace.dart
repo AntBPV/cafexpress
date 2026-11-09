@@ -4,15 +4,15 @@ import 'package:flutter/material.dart';
 
 import '../../navigation/domain/user_role.dart';
 import '../../navigation/presentation/main_navigation_shell.dart';
-import '../data/marketplace_repository.dart';
-import 'dashboard_page.dart';
-import 'product_pages.dart';
-import 'order_pages.dart';
-import 'profile_page.dart';
-import 'workspace_widgets.dart';
 import '../data/climate_repository.dart';
+import '../data/marketplace_repository.dart';
 import 'climate_controller.dart';
 import 'climate_panel.dart';
+import 'dashboard_page.dart';
+import 'order_pages.dart';
+import 'product_pages.dart';
+import 'profile_page.dart';
+import 'workspace_widgets.dart';
 
 class SessionWorkspace extends StatefulWidget {
   const SessionWorkspace({
@@ -34,6 +34,8 @@ class _SessionWorkspaceState extends State<SessionWorkspace> {
   late final ClimateController _climate;
   ClimateRepository? _weather;
   bool _modalScheduled = false, _showingModal = false;
+  final _catalogState = CatalogViewState();
+  final _ordersState = OrdersViewState();
 
   @override
   void initState() {
@@ -113,16 +115,19 @@ class _SessionWorkspaceState extends State<SessionWorkspace> {
         1 => ProductListPage(
           repository: widget.repository,
           onSessionExpired: widget.onSignOut,
+          viewState: _catalogState,
         ),
         2 => OrdersReadPage(
           repository: widget.repository,
           onSessionExpired: widget.onSignOut,
+          viewState: _ordersState,
         ),
         3 => PageBody(
           children: [
             const PageHeading(
               title: 'Clima de tus productos',
-              description: 'Consulta las condiciones de los orígenes relacionados con tu cuenta.',
+              description:
+                  'Consulta las condiciones de los orígenes relacionados con tu cuenta.',
             ),
             ClimatePanel(onSessionExpired: widget.onSignOut),
           ],

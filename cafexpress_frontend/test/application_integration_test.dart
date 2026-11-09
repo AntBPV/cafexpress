@@ -292,6 +292,93 @@ void main() {
     expect(find.text('Estado: Entregada'), findsOneWidget);
   });
 
+  testWidgets(
+    'formulario de producto pinta errores de validación del backend en cada campo',
+    (tester) async {
+      final repo = repository((request) async {
+        return fixtures.jsonResponse({
+          'mensaje': 'Error de validación en los campos',
+          'errores': {
+            'nombre': 'El nombre ya existe en tu catálogo',
+            'precioUnitario': 'El precio supera el límite permitido',
+          },
+        }, 422);
+      });
+      addTearDown(repo.api.close);
+      await tester.pumpWidget(
+        fixtures.host(
+          ProductFormPage(repository: repo, onSessionExpired: () {}),
+        ),
+      );
+      for (final entry in {
+        'name': 'Café duplicado',
+        'variety': 'Caturra',
+        'origin': 'Huila',
+        'stock': '10',
+        'price': '35000',
+      }.entries) {
+        await tester.enterText(
+          find.byKey(Key('product-form-${entry.key}')),
+          entry.value,
+        );
+      }
+      await fixtures.tapVisible(
+        tester,
+        find.byKey(const Key('product-form-save')),
+      );
+      expect(find.text('El nombre ya existe en tu catálogo'), findsOneWidget);
+      expect(
+        find.text('El precio supera el límite permitido'),
+        findsOneWidget,
+      );
+    },
+  );
+
+  testWidgets(
+    'detalle de orden muestra indicador completo, refresca automáticamente y maneja cambios concurrentes',
+    (tester) async {
+      var currentState = 'SOLICITADA';
+      final repo = repository((request) async {
+        if (request.method == 'PATCH') {
+          currentState = 'ACEPTADA';
+          return fixtures.jsonResponse({
+            'mensaje': 'La orden ya fue modificada desde otra sesión.',
+          }, 409);
+        }
+        return fixtures.jsonResponse(orderData(currentState));
+      });
+      addTearDown(repo.api.close);
+      await tester.pumpWidget(
+        fixtures.host(
+          OrderDetailPage(
+            repository: repo,
+            orderId: 'orden-1',
+            onSessionExpired: () {},
+            pollInterval: const Duration(seconds: 2),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(
+        find.byKey(const Key('order-progress-indicator')),
+        findsOneWidget,
+      );
+      expect(find.text('1. Solicitada'), findsOneWidget);
+      expect(find.text('2. Confirmada'), findsOneWidget);
+      expect(find.text('3. En preparación'), findsOneWidget);
+      expect(find.text('4. En tránsito'), findsOneWidget);
+      expect(find.text('5. Entregada'), findsOneWidget);
+
+      final advance = find.byKey(const Key('order-advance'));
+      await fixtures.tapVisible(tester, advance);
+      expect(find.text('Iniciar preparación'), findsOneWidget);
+      expect(
+        find.textContaining('Acciones actualizadas'),
+        findsOneWidget,
+      );
+    },
+  );
+
   for (final size in [const Size(375, 812), const Size(812, 375)]) {
     testWidgets('formularios y órdenes adaptables en $size', (tester) async {
       tester.view.physicalSize = size;

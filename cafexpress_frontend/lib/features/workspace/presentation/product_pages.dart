@@ -130,26 +130,41 @@ class _ProductListPageState extends State<ProductListPage> with AutomaticKeepAli
     });
   }
 
-  void _quickEditPrice(BuildContext context, Product product, Future<void> Function() reload) {
-    final controller = TextEditingController(text: product.price.toString());
+  // EDICIÓN RÁPIDA (AHORA CON PRECIO Y STOCK)
+  void _quickEditProduct(BuildContext context, Product product, Future<void> Function() reload) {
+    final priceController = TextEditingController(text: product.price.toString());
+    final stockController = TextEditingController(text: product.availableAmount.toString());
+
     showDialog(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Editar precio rápido'),
-        content: TextFormField(
-          controller: controller,
-          keyboardType: const TextInputType.numberWithOptions(decimal: true),
-          decoration: const InputDecoration(labelText: 'Nuevo precio'),
+        title: const Text('Edición rápida'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextFormField(
+              controller: priceController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Precio por presentación'),
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: stockController,
+              keyboardType: const TextInputType.numberWithOptions(decimal: true),
+              decoration: const InputDecoration(labelText: 'Cantidad disponible (Stock)'),
+            ),
+          ],
         ),
         actions: [
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           FilledButton(
             onPressed: () async {
-              final newPrice = double.tryParse(controller.text.replaceAll(',', '.'));
+              final newPrice = double.tryParse(priceController.text.replaceAll(',', '.'));
+              final newStock = num.tryParse(stockController.text.replaceAll(',', '.'));
               
-              if (newPrice == null || newPrice <= 0) {
+              if (newPrice == null || newPrice <= 0 || newStock == null || newStock < 0) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Ingresa un precio válido'), backgroundColor: Colors.red),
+                  const SnackBar(content: Text('Ingresa valores válidos (precio > 0 y stock >= 0)'), backgroundColor: Colors.red),
                 );
                 return;
               }
@@ -157,29 +172,26 @@ class _ProductListPageState extends State<ProductListPage> with AutomaticKeepAli
               Navigator.pop(ctx); // Cerrar el diálogo
               
               try {
-                // Enviamos el nuevo precio al backend
                 await widget.repository.saveProduct({
                   'nombre': product.name,
                   'tipo': product.type,
                   'variedad': product.variety ?? '',
                   'cantidadUnitaria': product.unitAmount,
                   'unidadCantidad': product.unit, 
-                  'cantidadDisponible': product.availableAmount,
+                  'cantidadDisponible': newStock, // <-- NUEVO STOCK
                   'lugarOrigen': product.origin,
-                  'precioUnitario': newPrice, // <-- PRECIO NUEVO
-                  'disponible': product.available,
+                  'precioUnitario': newPrice,     // <-- NUEVO PRECIO
+                  'disponible': newStock > 0,     // Si el stock se vuelve 0, se marca como no disponible automáticamente
                 }, id: product.id);
                 
                 if (!context.mounted) return;
                 
                 ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Precio actualizado con éxito'), backgroundColor: Colors.green),
+                  const SnackBar(content: Text('Producto actualizado con éxito'), backgroundColor: Colors.green),
                 );
                 
-                // 🚨 LA MAGIA ESTÁ AQUÍ: Esperamos 500ms a que Java guarde en la BD
+                // Esperamos 500ms a que Java guarde en la BD y recargamos
                 await Future.delayed(const Duration(milliseconds: 500));
-                
-                // Luego forzamos la recarga de la lista
                 setState(() {
                   _page = 0;
                   _revision++; 
@@ -401,8 +413,8 @@ class _ProductListPageState extends State<ProductListPage> with AutomaticKeepAli
                             if (widget.repository.isSeller)
                               IconButton(
                                 icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
-                                tooltip: 'Editar precio rápido',
-                                onPressed: () => _quickEditPrice(context, item, reload),
+                                tooltip: 'Editar precio y stock',
+                                onPressed: () => _quickEditProduct(context, item, reload), // <-- Cambiado a _quickEditProduct
                               ),
                             const ExcludeSemantics(child: Icon(Icons.chevron_right)),
                           ],

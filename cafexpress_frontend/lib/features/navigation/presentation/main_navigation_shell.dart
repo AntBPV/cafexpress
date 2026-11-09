@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import 'package:cafexpress_frontend/features/orders/screens/order_generation_screen.dart';
 import '../domain/user_role.dart';
 
 /// Especificación de cada destino dentro de la interfaz inicial de navegación (F2-34).
@@ -436,6 +437,27 @@ class _NavigationSectionContainer extends StatelessWidget {
                     ),
                     const SizedBox(height: 16),
                     Text(active.description, style: theme.textTheme.bodyLarge),
+                  
+                    // =======================================================
+                    // BOTÓN DE PRUEBA CON LAS DOS CONDICIONES APLICADAS
+                    // =======================================================
+                    if (selectedIndex == 0 && role == UserRole.comprador) ...[
+                      const SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        icon: const Icon(Icons.shopping_cart),
+                        label: const Text('Probar Generación de Orden'),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => const OrderGenerationScreen(),
+                            ),
+                          );
+                        },
+                      ),
+                    ],
+                    // =======================================================
+
                     if (onRoleChanged case final changeRole?) ...[
                       const SizedBox(height: 20),
                       Divider(color: colors.outlineVariant),
@@ -523,4 +545,4 @@ class _NavigationSectionContainer extends StatelessWidget {
       ),
     );
   }
-}
+} 

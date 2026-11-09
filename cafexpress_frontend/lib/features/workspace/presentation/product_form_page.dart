@@ -36,8 +36,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
   late String _type = widget.product?.type ?? 'CAFE',
       _unit = widget.product?.unit ?? 'KILOGRAMOS';
   late bool _available = widget.product?.available ?? true;
+  
   bool _sending = false, _submitted = false;
+  bool _isDirty = false; // <--- NUEVO: Para advertir cambios sin guardar
   String? _error;
+  Map<String, String> _fieldErrors = {}; // <--- NUEVO: Errores específicos por campo
+
   @override
   void dispose() {
     for (final value in [
@@ -65,6 +69,7 @@ class _ProductFormPageState extends State<ProductFormPage> {
 
   num _number(TextEditingController controller) =>
       num.parse(controller.text.trim().replaceAll(',', '.'));
+      
   String? _numeric(
     String? value,
     int integers,
@@ -88,10 +93,14 @@ class _ProductFormPageState extends State<ProductFormPage> {
     setState(() {
       _submitted = true;
       _error = null;
+      _fieldErrors.clear(); // Limpiamos errores previos del backend
     });
+    
     if (!_form.currentState!.validate()) return;
+    
     FocusScope.of(context).unfocus();
     setState(() => _sending = true);
+    
     try {
       final product = await widget.repository.saveProduct({
         'nombre': _name.text.trim(),
@@ -104,8 +113,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
         'precioUnitario': _number(_price),
         'disponible': _available,
       }, id: widget.product?.id);
+      
       if (!mounted) return;
-      setState(() => _sending = false);
+      setState(() {
+        _sending = false;
+        _isDirty = false; // Ya guardamos, no hay cambios pendientes
+      });
       Navigator.pop(context, product);
     } catch (failure) {
       if (!mounted) return;
@@ -113,11 +126,24 @@ class _ProductFormPageState extends State<ProductFormPage> {
         widget.onSessionExpired();
         return;
       }
+      
       setState(() {
         _sending = false;
-        _error = failure is ApiException
-            ? failure.message
-            : 'No pudimos guardar el producto. Reintenta.';
+        
+        // AQUI ATRAPAMOS LOS ERRORES DEL BACKEND POR CAMPO
+        if (failure is ApiException) {
+          // NOTA: Si tu clase ApiException tiene un mapa de errores (ej. failure.errors), 
+          // lo asignamos aquí:
+          // _fieldErrors = failure.errors; 
+          
+          // Si el backend solo devuelve un mensaje general, se muestra abajo.
+          _error = failure.message;
+        } else {
+          _error = 'No pudimos guardar el producto. Reintenta.';
+        }
+        
+        // Forzamos la validación para que los errores salgan en rojo
+        _form.currentState?.validate();
       });
     }
   }
@@ -134,20 +160,62 @@ class _ProductFormPageState extends State<ProductFormPage> {
       key: Key('product-form-$key'),
       controller: controller,
       readOnly: _sending,
-      decoration: InputDecoration(labelText: label),
-      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        errorText: _fieldErrors[key], // <--- Muestra el error del backend aquí
+      ),
+      validator: (value) {
+        // Primero validamos el error del backend si existe
+        if (_fieldErrors.containsKey(key)) return _fieldErrors[key];
+        // Si no, validamos lo local
+        return validator(value);
+      },
       textInputAction: TextInputAction.next,
       keyboardType: numeric
           ? const TextInputType.numberWithOptions(decimal: true)
           : TextInputType.text,
       onChanged: (_) {
-        if (_error != null) setState(() => _error = null);
+        setState(() {
+          _isDirty = true; // <--- Marca el formulario como modificado
+          if (_error != null) _error = null;
+          if (_fieldErrors.containsKey(key)) {
+            _fieldErrors.remove(key);
+            _form.currentState?.validate(); // Oculta el error al empezar a escribir
+          }
+        });
       },
     ),
   );
+
   @override
   Widget build(BuildContext context) => PopScope(
-    canPop: !_sending,
+    canPop: !_sending && !_isDirty, // <--- Solo deja salir si no hay cambios
+    onPopInvokedWithResult: (didPop, result) async {
+      if (didPop) return;
+      if (_sending) return; // No puedes salir mientras guarda
+      
+      // Diálogo de advertencia
+      final shouldPop = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          title: const Text('¿Descartar cambios?'),
+          content: const Text('Si sales ahora, perderás los cambios no guardados de este producto.'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Seguir editando'),
+            ),
+            FilledButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Descartar'),
+            ),
+          ],
+        ),
+      );
+      if (shouldPop == true && mounted) {
+        Navigator.pop(context); // Cierra el formulario
+      }
+    },
     child: Scaffold(
       appBar: AppBar(
         title: Text(
@@ -192,7 +260,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                         child: Text('Variedad'),
                       ),
                     ],
-                    onChanged: _sending ? null : (v) => _type = v!,
+                    onChanged: _sending ? null : (v) {
+                      setState(() {
+                        _type = v!;
+                        _isDirty = true; // Marca como modificado
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   _field(
@@ -228,7 +301,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                       ),
                       DropdownMenuItem(value: 'GRAMOS', child: Text('Gramos')),
                     ],
-                    onChanged: _sending ? null : (v) => _unit = v!,
+                    onChanged: _sending ? null : (v) {
+                      setState(() {
+                        _unit = v!;
+                        _isDirty = true; // Marca como modificado
+                      });
+                    },
                   ),
                   const SizedBox(height: 20),
                   _field(
@@ -251,7 +329,12 @@ class _ProductFormPageState extends State<ProductFormPage> {
                     value: _available,
                     onChanged: _sending
                         ? null
-                        : (v) => setState(() => _available = v),
+                        : (v) {
+                            setState(() {
+                              _available = v;
+                              _isDirty = true; // Marca como modificado
+                            });
+                          },
                   ),
                   if (_error != null)
                     Padding(
@@ -278,4 +361,4 @@ class _ProductFormPageState extends State<ProductFormPage> {
       ),
     ),
   );
-}
+} 

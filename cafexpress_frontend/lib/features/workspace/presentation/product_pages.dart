@@ -145,15 +145,52 @@ class _ProductListPageState extends State<ProductListPage> with AutomaticKeepAli
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
           FilledButton(
             onPressed: () async {
-              final newPrice = num.tryParse(controller.text.replaceAll(',', '.'));
-              if (newPrice == null) return;
-              Navigator.pop(ctx);
+              final newPrice = double.tryParse(controller.text.replaceAll(',', '.'));
               
-              // TODO: Aquí debes llamar al endpoint de tu backend para actualizar el precio.
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Precio actualizado a \$$newPrice (Simulado)')),
-              );
-              await reload();
+              if (newPrice == null || newPrice <= 0) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Ingresa un precio válido'), backgroundColor: Colors.red),
+                );
+                return;
+              }
+              
+              Navigator.pop(ctx); // Cerrar el diálogo
+              
+              try {
+                // Enviamos el nuevo precio al backend
+                await widget.repository.saveProduct({
+                  'nombre': product.name,
+                  'tipo': product.type,
+                  'variedad': product.variety ?? '',
+                  'cantidadUnitaria': product.unitAmount,
+                  'unidadCantidad': product.unit, 
+                  'cantidadDisponible': product.availableAmount,
+                  'lugarOrigen': product.origin,
+                  'precioUnitario': newPrice, // <-- PRECIO NUEVO
+                  'disponible': product.available,
+                }, id: product.id);
+                
+                if (!context.mounted) return;
+                
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Precio actualizado con éxito'), backgroundColor: Colors.green),
+                );
+                
+                // 🚨 LA MAGIA ESTÁ AQUÍ: Esperamos 500ms a que Java guarde en la BD
+                await Future.delayed(const Duration(milliseconds: 500));
+                
+                // Luego forzamos la recarga de la lista
+                setState(() {
+                  _page = 0;
+                  _revision++; 
+                });
+                
+              } catch (e) {
+                if (!context.mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Error al actualizar: $e'), backgroundColor: Colors.red),
+                );
+              }
             },
             child: const Text('Guardar'),
           ),
@@ -269,7 +306,7 @@ class _ProductListPageState extends State<ProductListPage> with AutomaticKeepAli
         country: _appliedCountry,
         minimumPrice: _appliedMinimum,
         maximumPrice: _appliedMaximum,
-        //sort: _currentSort.apiValue, 
+        //sort: _currentSort.apiValue, // Sigue comentado hasta que el backend lo soporte
       ),
       onSessionExpired: widget.onSessionExpired,
       builder: (data, reload) => PageBody(
@@ -751,4 +788,4 @@ class _ProductManageActionsState extends State<ProductManageActions> {
       if (_error != null) InfoNotice(_error!, isError: true),
     ],
   );
-} 
+}

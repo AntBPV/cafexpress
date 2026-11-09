@@ -24,9 +24,6 @@ class NavigationDestinationSpec {
 }
 
 /// F2-34: Interfaz inicial de navegación adaptable por rol (Comprador / Vendedor).
-///
-/// Actúa como contenedor base (Shell) donde cada módulo del equipo (Dashboard,
-/// Catálogo/Productos, Órdenes, Clima y Perfiles) puede inyectar su vista.
 class MainNavigationShell extends StatefulWidget {
   const MainNavigationShell({
     super.key,
@@ -46,7 +43,6 @@ class MainNavigationShell extends StatefulWidget {
   final ValueChanged<int>? onDestinationChanged;
   final VoidCallback? onSignOut;
 
-  /// Permite que los demás módulos inyecten su pantalla según el rol e índice activo.
   final Widget Function(
     BuildContext context,
     UserRole role,
@@ -438,9 +434,7 @@ class _NavigationSectionContainer extends StatelessWidget {
                     const SizedBox(height: 16),
                     Text(active.description, style: theme.textTheme.bodyLarge),
                   
-                    // =======================================================
-                    // BOTÓN DE PRUEBA CON LAS DOS CONDICIONES APLICADAS
-                    // =======================================================
+                    // BOTÓN DE PRUEBA (Temporal, solo Comprador en Inicio)
                     if (selectedIndex == 0 && role == UserRole.comprador) ...[
                       const SizedBox(height: 16),
                       ElevatedButton.icon(
@@ -456,7 +450,6 @@ class _NavigationSectionContainer extends StatelessWidget {
                         },
                       ),
                     ],
-                    // =======================================================
 
                     if (onRoleChanged case final changeRole?) ...[
                       const SizedBox(height: 20),
@@ -545,4 +538,4 @@ class _NavigationSectionContainer extends StatelessWidget {
       ),
     );
   }
-} 
+}

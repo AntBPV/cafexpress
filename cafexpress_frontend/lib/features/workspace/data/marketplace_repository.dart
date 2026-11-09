@@ -76,6 +76,7 @@ class MarketplaceRepository {
     String? country,
     num? minimumPrice,
     num? maximumPrice,
+    String? sort, // <--- PARÁMETRO AGREGADO
   }) {
     final query = Uri(
       queryParameters: <String, String>{
@@ -86,6 +87,7 @@ class MarketplaceRepository {
         if (country?.trim().isNotEmpty == true) 'paisOrigen': country!.trim(),
         if (minimumPrice != null) 'precioMin': '$minimumPrice',
         if (maximumPrice != null) 'precioMax': '$maximumPrice',
+        if (sort != null) 'sort': sort, // <--- AGREGADO A LA URL
       },
     ).query;
     return _read(
@@ -199,4 +201,4 @@ class MarketplaceRepository {
       );
     }
   }
-}
+} 

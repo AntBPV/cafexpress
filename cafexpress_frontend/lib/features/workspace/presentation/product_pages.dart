@@ -7,6 +7,17 @@ import 'workspace_widgets.dart';
 import 'product_form_page.dart';
 import 'order_pages.dart';
 
+// Enum para el ordenamiento (Sincronizado con lo que espera Spring Boot)
+enum CatalogSort {
+  recent('Recientes', 'creadoEn,desc'),
+  priceAsc('Menor precio', 'precio,asc'),
+  priceDesc('Mayor precio', 'precio,desc');
+
+  final String label;
+  final String apiValue;
+  const CatalogSort(this.label, this.apiValue);
+}
+
 Future<void> openProduct(
   BuildContext context,
   MarketplaceRepository repository,
@@ -34,7 +45,10 @@ class ProductListPage extends StatefulWidget {
   State<ProductListPage> createState() => _ProductListPageState();
 }
 
-class _ProductListPageState extends State<ProductListPage> {
+class _ProductListPageState extends State<ProductListPage> with AutomaticKeepAliveClientMixin {
+  @override
+  bool get wantKeepAlive => true;
+
   int _page = 0, _revision = 0;
   final _filters = GlobalKey<FormState>();
   final _origin = TextEditingController(),
@@ -43,12 +57,16 @@ class _ProductListPageState extends State<ProductListPage> {
       _maximum = TextEditingController();
   String? _draftType, _type, _appliedOrigin, _appliedCountry;
   num? _appliedMinimum, _appliedMaximum;
+  
+  CatalogSort _currentSort = CatalogSort.recent;
+
   bool get _filtered =>
       _type != null ||
       _appliedOrigin != null ||
       _appliedCountry != null ||
       _appliedMinimum != null ||
       _appliedMaximum != null;
+
   @override
   void dispose() {
     for (final c in [_origin, _country, _minimum, _maximum]) {
@@ -98,6 +116,52 @@ class _ProductListPageState extends State<ProductListPage> {
     });
   }
 
+  void _removeFilter(String filterType) {
+    setState(() {
+      switch (filterType) {
+        case 'type': _type = null; _draftType = null; break;
+        case 'origin': _appliedOrigin = null; _origin.clear(); break;
+        case 'country': _appliedCountry = null; _country.clear(); break;
+        case 'min': _appliedMinimum = null; _minimum.clear(); break;
+        case 'max': _appliedMaximum = null; _maximum.clear(); break;
+      }
+      _page = 0;
+      _revision++;
+    });
+  }
+
+  void _quickEditPrice(BuildContext context, Product product, Future<void> Function() reload) {
+    final controller = TextEditingController(text: product.price.toString());
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Editar precio rápido'),
+        content: TextFormField(
+          controller: controller,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          decoration: const InputDecoration(labelText: 'Nuevo precio'),
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancelar')),
+          FilledButton(
+            onPressed: () async {
+              final newPrice = num.tryParse(controller.text.replaceAll(',', '.'));
+              if (newPrice == null) return;
+              Navigator.pop(ctx);
+              
+              // TODO: Aquí debes llamar al endpoint de tu backend para actualizar el precio.
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Precio actualizado a \$$newPrice (Simulado)')),
+              );
+              await reload();
+            },
+            child: const Text('Guardar'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _filterBox() => Card.outlined(
     child: ExpansionTile(
       key: ValueKey('filters-$_revision'),
@@ -114,9 +178,7 @@ class _ProductListPageState extends State<ProductListPage> {
                 key: const Key('filter-type'),
                 initialValue: _draftType,
                 isExpanded: true,
-                decoration: const InputDecoration(
-                  labelText: 'Tipo de producto',
-                ),
+                decoration: const InputDecoration(labelText: 'Tipo de producto'),
                 items: const [
                   DropdownMenuItem(value: null, child: Text('Todos')),
                   DropdownMenuItem(value: 'CAFE', child: Text('Café')),
@@ -130,29 +192,21 @@ class _ProductListPageState extends State<ProductListPage> {
                 key: const Key('filter-country'),
                 controller: _country,
                 decoration: const InputDecoration(labelText: 'País de origen'),
-                validator: (v) => (v?.trim().length ?? 0) > 80
-                    ? 'Usa hasta 80 caracteres.'
-                    : null,
+                validator: (v) => (v?.trim().length ?? 0) > 80 ? 'Usa hasta 80 caracteres.' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 key: const Key('filter-origin'),
                 controller: _origin,
-                decoration: const InputDecoration(
-                  labelText: 'Ciudad o región de origen',
-                ),
-                validator: (v) => (v?.trim().length ?? 0) > 100
-                    ? 'Usa hasta 100 caracteres.'
-                    : null,
+                decoration: const InputDecoration(labelText: 'Ciudad o región de origen'),
+                validator: (v) => (v?.trim().length ?? 0) > 100 ? 'Usa hasta 100 caracteres.' : null,
               ),
               const SizedBox(height: 16),
               TextFormField(
                 key: const Key('filter-minimum'),
                 controller: _minimum,
                 decoration: const InputDecoration(labelText: 'Precio mínimo'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 validator: _price,
               ),
               const SizedBox(height: 16),
@@ -160,16 +214,8 @@ class _ProductListPageState extends State<ProductListPage> {
                 key: const Key('filter-maximum'),
                 controller: _maximum,
                 decoration: const InputDecoration(labelText: 'Precio máximo'),
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
-                validator: (v) =>
-                    _price(v) ??
-                    (_value(_minimum) != null &&
-                            _value(_maximum) != null &&
-                            _value(_minimum)! > _value(_maximum)!
-                        ? 'El máximo debe ser igual o mayor al mínimo.'
-                        : null),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                validator: (v) => _price(v) ?? (_value(_minimum) != null && _value(_maximum) != null && _value(_minimum)! > _value(_maximum)! ? 'El máximo debe ser igual o mayor al mínimo.' : null),
               ),
               const SizedBox(height: 16),
               Wrap(
@@ -193,157 +239,170 @@ class _ProductListPageState extends State<ProductListPage> {
       ],
     ),
   );
+
+  Widget _buildFilterChips() {
+    List<Widget> chips = [];
+    if (_type != null) chips.add(InputChip(label: Text('Tipo: $_type'), onDeleted: () => _removeFilter('type')));
+    if (_appliedCountry != null) chips.add(InputChip(label: Text('País: $_appliedCountry'), onDeleted: () => _removeFilter('country')));
+    if (_appliedOrigin != null) chips.add(InputChip(label: Text('Origen: $_appliedOrigin'), onDeleted: () => _removeFilter('origin')));
+    if (_appliedMinimum != null) chips.add(InputChip(label: Text('Min: \$$_appliedMinimum'), onDeleted: () => _removeFilter('min')));
+    if (_appliedMaximum != null) chips.add(InputChip(label: Text('Max: \$$_appliedMaximum'), onDeleted: () => _removeFilter('max')));
+
+    if (chips.isEmpty) return const SizedBox.shrink();
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 12.0),
+      child: Wrap(spacing: 8, runSpacing: 8, children: chips),
+    );
+  }
+
   @override
-  Widget build(BuildContext context) => RemoteView<ProductPage>(
-    key: ValueKey('$_page-$_revision'),
-    load: () => widget.repository.products(
-      page: _page,
-      type: _type,
-      origin: _appliedOrigin,
-      country: _appliedCountry,
-      minimumPrice: _appliedMinimum,
-      maximumPrice: _appliedMaximum,
-    ),
-    onSessionExpired: widget.onSessionExpired,
-    builder: (data, reload) => PageBody(
-      onRefresh: reload,
-      children: [
-        PageHeading(
-          title: widget.repository.isSeller
-              ? 'Mis productos'
-              : 'Explora los productos',
-          description: widget.repository.isSeller
-              ? 'Publica y administra tus productos.'
-              : 'Conoce el origen, la disponibilidad y al vendedor.',
-          onRefresh: reload,
-        ),
-        if (widget.repository.isSeller)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 20),
-            child: Align(
-              alignment: Alignment.centerLeft,
-              child: FilledButton.icon(
-                key: const Key('product-create'),
-                icon: const Icon(Icons.add),
-                label: const Text('Publicar producto'),
-                onPressed: () async {
-                  final saved = await Navigator.of(context).push<Product>(
-                    MaterialPageRoute(
-                      builder: (_) => ProductFormPage(
-                        repository: widget.repository,
-                        onSessionExpired: widget.onSessionExpired,
+  Widget build(BuildContext context) {
+    super.build(context);
+    
+    return RemoteView<ProductPage>(
+      key: ValueKey('$_page-$_revision-$_currentSort'),
+      load: () => widget.repository.products(
+        page: _page,
+        type: _type,
+        origin: _appliedOrigin,
+        country: _appliedCountry,
+        minimumPrice: _appliedMinimum,
+        maximumPrice: _appliedMaximum,
+        //sort: _currentSort.apiValue, 
+      ),
+      onSessionExpired: widget.onSessionExpired,
+      builder: (data, reload) => PageBody(
+        onRefresh: reload,
+        children: [
+          PageHeading(
+            title: widget.repository.isSeller ? 'Mis productos' : 'Explora los productos',
+            description: widget.repository.isSeller ? 'Publica y administra tus productos.' : 'Conoce el origen, la disponibilidad y al vendedor.',
+            onRefresh: reload,
+          ),
+          if (widget.repository.isSeller)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 20),
+              child: Align(
+                alignment: Alignment.centerLeft,
+                child: FilledButton.icon(
+                  key: const Key('product-create'),
+                  icon: const Icon(Icons.add),
+                  label: const Text('Publicar producto'),
+                  onPressed: () async {
+                    final saved = await Navigator.of(context).push<Product>(
+                      MaterialPageRoute(
+                        builder: (_) => ProductFormPage(
+                          repository: widget.repository,
+                          onSessionExpired: widget.onSessionExpired,
+                        ),
                       ),
-                    ),
-                  );
-                  if (saved != null && mounted) {
-                    setState(() {
-                      _page = 0;
-                      _revision++;
-                    });
-                  }
-                },
+                    );
+                    if (saved != null && mounted) {
+                      setState(() {
+                        _page = 0;
+                        _revision++;
+                      });
+                    }
+                  },
+                ),
               ),
             ),
-          ),
-        _filterBox(),
-        const SizedBox(height: 20),
-        if (_filtered)
-          Align(
-            alignment: Alignment.centerLeft,
-            child: TextButton(
-              onPressed: _clear,
-              child: const Text('Quitar filtros'),
-            ),
-          ),
-        if (data.items.isEmpty)
-          EmptyMessage(
-            title: _filtered
-                ? 'Sin resultados para estos filtros'
-                : 'No hay productos para mostrar',
-            message: _filtered
-                ? 'Prueba con otros criterios o limpia los filtros.'
-                : widget.repository.isSeller
-                ? 'Publica tu primer producto para que aparezca aquí.'
-                : 'Vuelve a consultar más tarde.',
-          ),
-        for (final item in data.items)
-          Padding(
-            padding: const EdgeInsets.only(bottom: 12),
-            child: Card.outlined(
-              child: InkWell(
-                borderRadius: BorderRadius.circular(12),
-                onTap: () async {
-                  await openProduct(
-                    context,
-                    widget.repository,
-                    item.id,
-                    widget.onSessionExpired,
-                  );
-                  if (context.mounted) await reload();
+          _filterBox(),
+          
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Expanded(child: _buildFilterChips()),
+              PopupMenuButton<CatalogSort>(
+                icon: const Icon(Icons.sort),
+                tooltip: 'Ordenar por',
+                initialValue: _currentSort,
+                onSelected: (CatalogSort newSort) {
+                  setState(() {
+                    _currentSort = newSort;
+                    _page = 0;
+                    _revision++;
+                  });
                 },
-                child: Padding(
-                  padding: const EdgeInsets.all(20),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
-                        children: [
-                          const ExcludeSemantics(
-                            child: Icon(Icons.eco_outlined),
-                          ),
-                          const SizedBox(width: 12),
-                          Expanded(
-                            child: Text(
-                              item.name,
-                              style: Theme.of(context).textTheme.titleLarge,
+                itemBuilder: (context) => CatalogSort.values.map((sort) {
+                  return PopupMenuItem(value: sort, child: Text(sort.label));
+                }).toList(),
+              ),
+            ],
+          ),
+          
+          const SizedBox(height: 12),
+          
+          if (data.items.isEmpty)
+            EmptyMessage(
+              title: _filtered ? 'Sin resultados para estos filtros' : 'No hay productos para mostrar',
+              message: _filtered ? 'Prueba con otros criterios o limpia los filtros.' : widget.repository.isSeller ? 'Publica tu primer producto para que aparezca aquí.' : 'Vuelve a consultar más tarde.',
+            ),
+          for (final item in data.items)
+            Padding(
+              padding: const EdgeInsets.only(bottom: 12),
+              child: Card.outlined(
+                child: InkWell(
+                  borderRadius: BorderRadius.circular(12),
+                  onTap: () async {
+                    await openProduct(context, widget.repository, item.id, widget.onSessionExpired);
+                    if (context.mounted) await reload();
+                  },
+                  child: Padding(
+                    padding: const EdgeInsets.all(20),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            const ExcludeSemantics(child: Icon(Icons.eco_outlined)),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(item.name, style: Theme.of(context).textTheme.titleLarge),
                             ),
-                          ),
-                          const ExcludeSemantics(
-                            child: Icon(Icons.chevron_right),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                      Text(
-                        '${item.typeLabel} · ${item.origin} · ${item.seller.country ?? "País sin especificar"}',
-                      ),
-                      if (item.variety?.isNotEmpty == true)
-                        Text('Variedad: ${item.variety}'),
-                      const SizedBox(height: 8),
-                      Text('Precio por presentación: ${number(item.price)}'),
-                      Text(
-                        'Disponible: ${number(item.availableAmount)} unidades${item.available ? "" : " · Fuera del catálogo"}',
-                      ),
-                    ],
+                            if (widget.repository.isSeller)
+                              IconButton(
+                                icon: const Icon(Icons.edit_outlined, size: 20, color: Colors.blue),
+                                tooltip: 'Editar precio rápido',
+                                onPressed: () => _quickEditPrice(context, item, reload),
+                              ),
+                            const ExcludeSemantics(child: Icon(Icons.chevron_right)),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        Text('${item.typeLabel} · ${item.origin} · ${item.seller.country ?? "País sin especificar"}'),
+                        if (item.variety?.isNotEmpty == true) Text('Variedad: ${item.variety}'),
+                        const SizedBox(height: 8),
+                        Text('Precio por presentación: ${number(item.price)}'),
+                        Text('Disponible: ${number(item.availableAmount)} unidades${item.available ? "" : " · Fuera del catálogo"}'),
+                      ],
+                    ),
                   ),
                 ),
               ),
             ),
-          ),
-        if (data.total > 0) ...[
-          Text(
-            '${number(data.total)} productos · Página ${data.page + 1} de ${data.totalPages}',
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 16,
-            children: [
-              OutlinedButton(
-                onPressed: _page > 0 ? () => setState(() => _page--) : null,
-                child: const Text('Anterior'),
-              ),
-              OutlinedButton(
-                onPressed: _page + 1 < data.totalPages
-                    ? () => setState(() => _page++)
-                    : null,
-                child: const Text('Siguiente'),
-              ),
-            ],
-          ),
+          if (data.total > 0) ...[
+            Text('${number(data.total)} productos · Página ${data.page + 1} de ${data.totalPages}'),
+            const SizedBox(height: 12),
+            Wrap(
+              spacing: 16,
+              children: [
+                OutlinedButton(
+                  onPressed: _page > 0 ? () => setState(() => _page--) : null,
+                  child: const Text('Anterior'),
+                ),
+                OutlinedButton(
+                  onPressed: _page + 1 < data.totalPages ? () => setState(() => _page++) : null,
+                  child: const Text('Siguiente'),
+                ),
+              ],
+            ),
+          ],
         ],
-      ],
-    ),
-  );
+      ),
+    );
+  }
 }
 
 class ProductDetailPage extends StatelessWidget {
@@ -377,39 +436,16 @@ class ProductDetailPage extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text(
-                      'Precio por unidad',
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
+                    Text('Precio por unidad', style: Theme.of(context).textTheme.labelLarge),
                     const SizedBox(height: 8),
-                    Text(
-                      number(product.price),
-                      style: Theme.of(context).textTheme.displaySmall
-                          ?.copyWith(fontWeight: FontWeight.w700),
-                    ),
+                    Text(number(product.price), style: Theme.of(context).textTheme.displaySmall?.copyWith(fontWeight: FontWeight.w700)),
                     const SizedBox(height: 24),
-                    _Detail(
-                      'Presentación',
-                      '${number(product.unitAmount)} ${product.unitLabel} por unidad',
-                    ),
-                    _Detail(
-                      'Cantidad disponible',
-                      '${number(product.availableAmount)} unidades',
-                    ),
+                    _Detail('Presentación', '${number(product.unitAmount)} ${product.unitLabel} por unidad'),
+                    _Detail('Cantidad disponible', '${number(product.availableAmount)} unidades'),
                     _Detail('Tipo de producto', product.typeLabel),
-                    _Detail(
-                      'Variedad',
-                      product.variety?.isNotEmpty == true
-                          ? product.variety!
-                          : 'Sin especificar',
-                    ),
+                    _Detail('Variedad', product.variety?.isNotEmpty == true ? product.variety! : 'Sin especificar'),
                     _Detail('Origen del producto', product.origin),
-                    _Detail(
-                      'Disponibilidad',
-                      product.canOrder
-                          ? 'Disponible para solicitar'
-                          : 'No disponible',
-                    ),
+                    _Detail('Disponibilidad', product.canOrder ? 'Disponible para solicitar' : 'No disponible'),
                   ],
                 ),
               ),
@@ -422,14 +458,8 @@ class ProductDetailPage extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _Detail('Vendedor', product.seller.name),
-                    _Detail(
-                      'Empresa o productor',
-                      product.seller.company ?? 'Sin información',
-                    ),
-                    _Detail(
-                      'País de origen',
-                      product.seller.country ?? 'Sin información',
-                    ),
+                    _Detail('Empresa o productor', product.seller.company ?? 'Sin información'),
+                    _Detail('País de origen', product.seller.country ?? 'Sin información'),
                     _Detail('Correo de contacto', product.seller.email),
                   ],
                 ),
@@ -449,15 +479,14 @@ class ProductDetailPage extends StatelessWidget {
                 onPressed: !product.canOrder
                     ? null
                     : () async {
-                        final order = await Navigator.of(context)
-                            .push<OrderSummary>(
-                              MaterialPageRoute(
-                                builder: (_) => StartOrderPage(
-                                  repository: repository,
-                                  product: product,
-                                ),
-                              ),
-                            );
+                        final order = await Navigator.of(context).push<OrderSummary>(
+                          MaterialPageRoute(
+                            builder: (_) => StartOrderPage(
+                              repository: repository,
+                              product: product,
+                            ),
+                          ),
+                        );
                         if (context.mounted && order != null) {
                           final viewOrder = await showDialog<bool>(
                             context: context,
@@ -468,37 +497,20 @@ class ProductDetailPage extends StatelessWidget {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text('Cantidad: ${number(order.quantity)}'),
-                                  Text(
-                                    'Precio aplicado: ${order.unitPrice == null ? "Revisa la orden" : number(order.unitPrice!)}',
-                                  ),
-                                  Text(
-                                    'Total confirmado: ${order.total == null ? "Revisa la orden" : number(order.total!)}',
-                                  ),
+                                  Text('Precio aplicado: ${order.unitPrice == null ? "Revisa la orden" : number(order.unitPrice!)}'),
+                                  Text('Total confirmado: ${order.total == null ? "Revisa la orden" : number(order.total!)}'),
                                   const Text('Estado: Solicitada'),
                                 ],
                               ),
                               actions: [
-                                TextButton(
-                                  onPressed: () =>
-                                      Navigator.pop(dialogContext, false),
-                                  child: const Text('Cerrar'),
-                                ),
-                                FilledButton(
-                                  onPressed: () =>
-                                      Navigator.pop(dialogContext, true),
-                                  child: const Text('Ver orden'),
-                                ),
+                                TextButton(onPressed: () => Navigator.pop(dialogContext, false), child: const Text('Cerrar')),
+                                FilledButton(onPressed: () => Navigator.pop(dialogContext, true), child: const Text('Ver orden')),
                               ],
                             ),
                           );
                           if (!context.mounted) return;
                           if (viewOrder == true) {
-                            await openOrder(
-                              context,
-                              repository,
-                              order.id,
-                              onSessionExpired,
-                            );
+                            await openOrder(context, repository, order.id, onSessionExpired);
                           }
                           if (!context.mounted) return;
                           await reload();
@@ -508,9 +520,7 @@ class ProductDetailPage extends StatelessWidget {
                 label: const Text('Iniciar solicitud'),
               ),
               const SizedBox(height: 12),
-              const Text(
-                'Consulta la información del vendedor antes de solicitar. Esta acción no realiza pagos.',
-              ),
+              const Text('Consulta la información del vendedor antes de solicitar. Esta acción no realiza pagos.'),
             ],
           ],
         ),
@@ -532,12 +542,7 @@ class _Detail extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            label,
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(
-              color: Theme.of(context).colorScheme.onSurfaceVariant,
-            ),
-          ),
+          Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           const SizedBox(height: 4),
           SelectableText(value, style: Theme.of(context).textTheme.bodyLarge),
         ],
@@ -622,43 +627,29 @@ class _StartOrderPageState extends State<StartOrderPage> {
           children: [
             PageHeading(
               title: widget.product.name,
-              description:
-                  'Solicitud a ${widget.product.seller.company ?? widget.product.seller.name}.',
+              description: 'Solicitud a ${widget.product.seller.company ?? widget.product.seller.name}.',
             ),
-            Text(
-              'Disponible: ${number(widget.product.availableAmount)} unidades.',
-            ),
+            Text('Disponible: ${number(widget.product.availableAmount)} unidades.'),
             const SizedBox(height: 24),
             Form(
               key: _form,
-              autovalidateMode: _submitted
-                  ? AutovalidateMode.onUserInteraction
-                  : AutovalidateMode.disabled,
+              autovalidateMode: _submitted ? AutovalidateMode.onUserInteraction : AutovalidateMode.disabled,
               child: TextFormField(
                 key: const Key('order-quantity'),
                 controller: _quantity,
                 readOnly: _sending,
-                keyboardType: const TextInputType.numberWithOptions(
-                  decimal: true,
-                ),
+                keyboardType: const TextInputType.numberWithOptions(decimal: true),
                 textInputAction: TextInputAction.done,
-                decoration: const InputDecoration(
-                  labelText: 'Cantidad de unidades',
-                ),
+                decoration: const InputDecoration(labelText: 'Cantidad de unidades'),
                 validator: _validate,
                 onFieldSubmitted: (_) => _submit(),
                 onChanged: (_) => setState(() => _error = null),
               ),
             ),
             const SizedBox(height: 24),
-            Text(
-              'Total de referencia: ${number((quantity ?? 0) * widget.product.price)}',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
+            Text('Total de referencia: ${number((quantity ?? 0) * widget.product.price)}', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 12),
-            const Text(
-              'Esta solicitud queda pendiente de aceptación por el vendedor. No realiza pagos.',
-            ),
+            const Text('Esta solicitud queda pendiente de aceptación por el vendedor. No realiza pagos.'),
             if (_error != null) ...[
               const SizedBox(height: 24),
               InfoNotice(_error!, isError: true),
@@ -701,18 +692,10 @@ class _ProductManageActionsState extends State<ProductManageActions> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('¿Eliminar producto?'),
-        content: const Text(
-          'Solo se puede eliminar si no tiene órdenes asociadas. Puedes desactivarlo desde Editar producto.',
-        ),
+        content: const Text('Solo se puede eliminar si no tiene órdenes asociadas. Puedes desactivarlo desde Editar producto.'),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancelar'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Eliminar'),
-          ),
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Eliminar')),
         ],
       ),
     );
@@ -732,9 +715,7 @@ class _ProductManageActionsState extends State<ProductManageActions> {
       }
       setState(() {
         _deleting = false;
-        _error = failure is ApiException
-            ? failure.message
-            : 'No pudimos eliminar el producto.';
+        _error = failure is ApiException ? failure.message : 'No pudimos eliminar el producto.';
       });
     }
   }
@@ -770,4 +751,4 @@ class _ProductManageActionsState extends State<ProductManageActions> {
       if (_error != null) InfoNotice(_error!, isError: true),
     ],
   );
-}
+} 

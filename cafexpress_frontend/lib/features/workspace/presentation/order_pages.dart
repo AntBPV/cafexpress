@@ -152,17 +152,30 @@ class _OrdersReadPageState extends State<OrdersReadPage>
                   for (final sort in OrderSort.values)
                     PopupMenuItem(value: sort, child: Text(sort.label)),
                 ],
-                child: Padding(
+                child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 12,
                     vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.sort, size: 20),
+                      Icon(
+                        Icons.sort_rounded,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                       const SizedBox(width: 6),
-                      Text('Ordenar: ${_currentSort.label}'),
+                      Text(
+                        'Ordenar: ${_currentSort.label}',
+                        style: const TextStyle(fontWeight: FontWeight.w600),
+                      ),
                     ],
                   ),
                 ),
@@ -410,25 +423,47 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.primary.withValues(alpha: 0.08),
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: Text(
+                            'Total: ${order.total == null ? "Sin información" : number(order.total!)}',
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                        const SizedBox(height: 16),
                         Text('Cantidad: ${number(order.quantity)} unidades'),
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 10),
                         Text(
                           'Precio aplicado por unidad: ${order.unitPrice == null ? "Sin información" : number(order.unitPrice!)}',
                         ),
-                        const SizedBox(height: 12),
-                        Text(
-                          'Total: ${order.total == null ? "Sin información" : number(order.total!)}',
-                          style: Theme.of(context).textTheme.headlineSmall,
+                        const Padding(
+                          padding: EdgeInsets.symmetric(vertical: 14),
+                          child: Divider(height: 1),
                         ),
-                        const SizedBox(height: 16),
                         Text(
                           'Comprador: ${order.buyer?.name ?? "Sin información"}',
                         ),
+                        const SizedBox(height: 6),
                         Text(
                           'Vendedor: ${order.seller?.company ?? order.seller?.name ?? "Sin información"}',
                         ),
-                        const SizedBox(height: 16),
-                        SelectableText('Orden: ${order.id}'),
+                        const SizedBox(height: 14),
+                        SelectableText(
+                          'Orden: ${order.id}',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
+                        ),
                       ],
                     ),
                   ),

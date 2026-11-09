@@ -31,9 +31,34 @@ class DashboardPage extends StatelessWidget {
               : 'Tus solicitudes y las novedades de los productos que te interesan.',
           onRefresh: reload,
         ),
-        Text(
-          'Panel del ${data.profile.roleLabel.toLowerCase()} · Actualizado ${date(data.updated)}',
-          style: Theme.of(context).textTheme.labelLarge,
+        Align(
+          alignment: Alignment.centerLeft,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ExcludeSemantics(
+                  child: Icon(
+                    Icons.verified_user_outlined,
+                    size: 16,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Flexible(
+                  child: Text(
+                    'Panel del ${data.profile.roleLabel.toLowerCase()} · Actualizado ${date(data.updated)}',
+                    style: Theme.of(context).textTheme.labelLarge,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
         const SizedBox(height: 24),
         if (data.profile.isSeller && !data.profile.isComplete) ...[
@@ -53,6 +78,7 @@ class DashboardPage extends StatelessWidget {
         ],
         LayoutBuilder(
           builder: (context, bounds) {
+            final colors = Theme.of(context).colorScheme;
             final stats = [
               if (data.profile.isSeller)
                 (
@@ -89,18 +115,28 @@ class DashboardPage extends StatelessWidget {
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
                             ExcludeSemantics(
-                              child: Icon(
-                                icon,
-                                color: Theme.of(context).colorScheme.primary,
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: colors.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(icon, color: colors.primary),
                               ),
                             ),
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             Text(
                               number(count),
                               style: Theme.of(context).textTheme.headlineLarge,
                             ),
                             const SizedBox(height: 4),
-                            Text(label),
+                            Text(
+                              label,
+                              style: TextStyle(
+                                color: colors.onSurfaceVariant,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
                           ],
                         ),
                       ),

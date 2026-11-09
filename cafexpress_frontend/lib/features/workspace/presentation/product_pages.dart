@@ -571,20 +571,31 @@ class _ProductListPageState extends State<ProductListPage>
                   for (final sort in CatalogSort.values)
                     PopupMenuItem(value: sort, child: Text(sort.label)),
                 ],
-                child: Padding(
+                child: Container(
                   padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
+                    horizontal: 12,
                     vertical: 8,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.surfaceContainerHighest,
+                    borderRadius: BorderRadius.circular(10),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      const Icon(Icons.sort, size: 20),
+                      Icon(
+                        Icons.sort_rounded,
+                        size: 18,
+                        color: Theme.of(context).colorScheme.primary,
+                      ),
                       const SizedBox(width: 6),
                       Flexible(
                         child: Text(
                           'Ordenar: ${_currentSort.label}',
                           overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(fontWeight: FontWeight.w600),
                         ),
                       ),
                     ],
@@ -615,8 +626,9 @@ class _ProductListPageState extends State<ProductListPage>
             Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: Card.outlined(
+                margin: EdgeInsets.zero,
                 child: InkWell(
-                  borderRadius: BorderRadius.circular(12),
+                  borderRadius: BorderRadius.circular(16),
                   onTap: () async {
                     await openProduct(
                       context,
@@ -633,14 +645,31 @@ class _ProductListPageState extends State<ProductListPage>
                       children: [
                         Row(
                           children: [
-                            const ExcludeSemantics(
-                              child: Icon(Icons.eco_outlined),
+                            ExcludeSemantics(
+                              child: Container(
+                                padding: const EdgeInsets.all(10),
+                                decoration: BoxDecoration(
+                                  color: Theme.of(
+                                    context,
+                                  ).colorScheme.primary.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  item.type == 'CAFE'
+                                      ? Icons.coffee_outlined
+                                      : item.type == 'CACAO'
+                                      ? Icons.spa_outlined
+                                      : Icons.eco_outlined,
+                                  color: Theme.of(context).colorScheme.primary,
+                                ),
+                              ),
                             ),
                             const SizedBox(width: 12),
                             Expanded(
                               child: Text(
                                 item.name,
-                                style: Theme.of(context).textTheme.titleLarge,
+                                style: Theme.of(context).textTheme.titleLarge
+                                    ?.copyWith(fontWeight: FontWeight.w700),
                               ),
                             ),
                             if (widget.repository.isSeller)
@@ -656,20 +685,52 @@ class _ProductListPageState extends State<ProductListPage>
                                     _quickEditProduct(context, item, reload),
                               ),
                             const ExcludeSemantics(
-                              child: Icon(Icons.chevron_right),
+                              child: Icon(Icons.chevron_right_rounded),
                             ),
                           ],
                         ),
                         const SizedBox(height: 12),
                         Text(
                           '${item.typeLabel} · ${item.origin} · ${item.seller.country ?? "País sin especificar"}',
+                          style: TextStyle(
+                            color: Theme.of(
+                              context,
+                            ).colorScheme.onSurfaceVariant,
+                          ),
                         ),
-                        if (item.variety?.isNotEmpty == true)
+                        if (item.variety?.isNotEmpty == true) ...[
+                          const SizedBox(height: 4),
                           Text('Variedad: ${item.variety}'),
-                        const SizedBox(height: 8),
-                        Text('Precio por presentación: ${number(item.price)}'),
-                        Text(
-                          'Disponible: ${number(item.availableAmount)} unidades${item.available ? "" : " · Fuera del catálogo"}',
+                        ],
+                        const SizedBox(height: 12),
+                        Wrap(
+                          spacing: 12,
+                          runSpacing: 8,
+                          crossAxisAlignment: WrapCrossAlignment.center,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 5,
+                              ),
+                              decoration: BoxDecoration(
+                                color: Theme.of(
+                                  context,
+                                ).colorScheme.primary.withValues(alpha: 0.10),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: Text(
+                                'Precio por presentación: ${number(item.price)}',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.primary,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              ),
+                            ),
+                            Text(
+                              'Disponible: ${number(item.availableAmount)} unidades${item.available ? "" : " · Fuera del catálogo"}',
+                            ),
+                          ],
                         ),
                       ],
                     ),
